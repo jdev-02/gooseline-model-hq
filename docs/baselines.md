@@ -26,17 +26,23 @@ Produced by `uv run python -m src.mlb.run_phase0`, written to
 | home_always | 7289 | 2.9255 | 4.511 | 0.2496 | 0.019 | — | — |
 | elo_lite | 7289 | 2.9129 | 4.454 | 0.2445 | — | yes | — |
 | linear, Tier A (schedule-only features, quick Kalman grid) | 7289 | 2.9090 | 4.437 | 0.2449 | 0.062 | yes | NLL yes, Brier **no** (0.2449 vs 0.2445) |
-| linear, Tier A + pitcher block | pending | | | | | | |
+| **linear, Tier A + pitcher block** (boxscores 2021–2026, widened Kalman grid) | 7289 | **2.9076** | **4.431** | **0.2438** | 0.071 | **yes** | **yes** |
 
-Embargo check (Tier A): NLL 2.909 with `embargo_steps=1` vs 2.909 without.
-No within-series leakage signal.
+Embargo check: NLL 2.9075 with `embargo_steps=1` vs 2.9076 without. No
+within-series leakage signal. `assert_no_leakage(r2_ceiling=0.60)` passed on
+every fold (R² = 0.035).
 
-Reading: the Tier-A linear model is a hair short of the Brier gate against
-Elo-lite. The Kalman grid pinned every parameter at its lower edge (slow
-drift, strong between-season reversion), so the grid was widened downward
-and the run is being repeated with the pitcher block once the boxscore cache
-is complete. Until a row in this table shows both "yes", the MLB verdicts on
-the site are for paper tracking only.
+Frozen config (`data/mlb/model_config.json`, 2026-08-27): Kalman
+`obs_var=19, step_q=0.001, season_inflate=0.1, season_revert=0.75`
+(HFA learned at 0.04 runs); ridge `lam=1000`, season half-life 2.0;
+`RECAL_SCALE=0.975`.
+
+Reading: the gate passes, narrowly. The pitcher block is worth about 0.0011
+Brier over the schedule-only model and 0.0007 over Elo-lite; on a 4.4-run
+sigma that is a real but small edge, and it is the reason most cards on the
+site are passes. Boxscores before 2021 are not yet cached, so pitcher
+features for 2015–2020 training rows sit at the league mean; backfilling them
+is the next cheap improvement to try.
 
 ## NFL
 

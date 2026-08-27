@@ -1,0 +1,11 @@
+{
+  "obs_var": 19.0,
+  "step_q": 0.001,
+  "season_inflate": 0.1,
+  "season_revert": 0.75,
+  "step_col": "day_index",
+  "init_hfa": 0.2,
+  "init_hfa_var": 0.25,
+  "init_var": 1.0,
+  "hfa_q": 1e-05
+}

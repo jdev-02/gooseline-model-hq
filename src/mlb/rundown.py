@@ -118,10 +118,10 @@ def rundown(days=1, db_path="kalshi_prices.db", edge_threshold=0.04, narrative_p
         p_n = float(norm.cdf(mu_n / (recal * sg_n)))
         rec = {"date": r.gameday.date(), "game_pk": r.game_pk, "away": r.away_team, "home": r.home_team,
                "home_sp": r.home_sp_name, "away_sp": r.away_sp_name,
-               "mu": round(float(mu[j]), 2), "sigma": round(float(sigma[j]), 2), "p_home": round(float(p_home[j]), 3),
+               "mu": round(float(mu[j]), 2), "sigma": round(float(sigma[j]), 3), "p_home": round(float(p_home[j]), 3),
                "mkt_home": None, "mkt_away": None, "edge": None, "verdict": "no price",
                "narrative_shift": round(shift, 2), "mu_narrative": round(mu_n, 2),
-               "sigma_narrative": round(sg_n, 2), "p_home_narrative": round(p_n, 3),
+               "sigma_narrative": round(sg_n, 3), "p_home_narrative": round(p_n, 3),
                "edge_narrative": None, "verdict_narrative": "no price",
                "note": ent.note if ent else ""}
         ev = match_mlb_event(prices, r.gameday.date(), r.away_team, r.home_team, int(r.game_number))

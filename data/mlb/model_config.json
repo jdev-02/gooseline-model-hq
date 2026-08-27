@@ -1,0 +1,35 @@
+{
+  "kalman": {
+    "obs_var": 19.0,
+    "step_q": 0.001,
+    "season_inflate": 0.1,
+    "season_revert": 0.75,
+    "step_col": "day_index",
+    "init_hfa": 0.2,
+    "init_hfa_var": 0.25,
+    "init_var": 1.0,
+    "hfa_q": 1e-05
+  },
+  "lam": 1000.0,
+  "half_life_seasons": 2.0,
+  "recal_scale": 0.975,
+  "feature_cols": [
+    "kalman_diff",
+    "kalman_var",
+    "rd_ewma_diff",
+    "rd_slope_diff",
+    "pressure_diff",
+    "lob_rate_diff",
+    "late_inning_diff",
+    "log_park_factor",
+    "day_night",
+    "rest_diff",
+    "div_game",
+    "sp_fip_diff",
+    "sp_command_diff",
+    "sp_command_consistency_diff",
+    "sp_rest_diff",
+    "bp_fip_diff",
+    "bp_workload_diff"
+  ]
+}
