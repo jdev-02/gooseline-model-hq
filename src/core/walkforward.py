@@ -11,29 +11,44 @@ def season_decay_weights(train_seasons, asof_season, half_life_seasons):
 
 
 def walk_forward(df, feature_cols, test_season, lam=0.0, half_life_seasons=np.inf,
-                 model_factory=None):
-    """Refit weekly on all games strictly before each test week; predict that week.
+                 model_factory=None, step_col="week", min_train=100,
+                 refit_every=1, embargo_steps=0):
+    """Refit on all games strictly before each test step; predict that step.
 
     model_factory() must return an object with fit(X, y, sample_weight) and
-    predict_dist(X). Defaults to LinearGaussianModel(lam). Swap in the MLP
-    wrapper for Deliverable III.
+    predict_dist(X). Defaults to LinearGaussianModel(lam).
+
+    step_col     : the time index within a season ("week" for NFL,
+                   "day_index" for MLB).
+    refit_every  : refit only every Nth test step and reuse the previous fit
+                   in between. Still strictly causal; keeps daily sports
+                   tractable.
+    embargo_steps: exclude games within this many steps before the test step
+                   from training (mirrors src.core.splits embargo semantics).
     """
     if model_factory is None:
         model_factory = lambda: LinearGaussianModel(lam=lam)
 
     out = []
-    test_weeks = sorted(df.loc[df["season"] == test_season, "week"].unique())
-    for wk in test_weeks:
-        train = df[(df["season"] < test_season) |
-                   ((df["season"] == test_season) & (df["week"] < wk))]
-        test = df[(df["season"] == test_season) & (df["week"] == wk)]
-        if len(train) < 100 or len(test) == 0:
+    test_steps = sorted(df.loc[df["season"] == test_season, step_col].unique())
+    model = None
+    for k, st in enumerate(test_steps):
+        test = df[(df["season"] == test_season) & (df[step_col] == st)]
+        if len(test) == 0:
             continue
-        sw = season_decay_weights(train["season"].values, test_season, half_life_seasons)
-        model = model_factory()
-        model.fit(train[feature_cols].values, train["y"].values, sample_weight=sw)
+        if model is None or k % refit_every == 0:
+            train = df[(df["season"] < test_season) |
+                       ((df["season"] == test_season) &
+                        (df[step_col] < st - embargo_steps))]
+            train = train[train["y"].notna()]
+            if len(train) < min_train:
+                continue
+            sw = season_decay_weights(train["season"].values, test_season,
+                                      half_life_seasons)
+            model = model_factory()
+            model.fit(train[feature_cols].values, train["y"].values, sample_weight=sw)
         mu, sigma = model.predict_dist(test[feature_cols].values)
-        chunk = test[["game_id", "season", "week", "home_team", "away_team", "y"]].copy()
+        chunk = test[["game_id", "season", step_col, "home_team", "away_team", "y"]].copy()
         chunk["mu"] = mu
         chunk["sigma"] = sigma
         out.append(chunk)
@@ -51,12 +66,12 @@ def evaluate(preds):
     }
 
 
-def tune(df, feature_cols, val_season, lam_grid, half_life_grid):
+def tune(df, feature_cols, val_season, lam_grid, half_life_grid, **kw):
     rows = []
     for hl in half_life_grid:
         for lam in lam_grid:
             preds = walk_forward(df, feature_cols, val_season,
-                                 lam=lam, half_life_seasons=hl)
+                                 lam=lam, half_life_seasons=hl, **kw)
             m = evaluate(preds)
             rows.append({"half_life_seasons": hl, "lam": lam, **m})
     table = pd.DataFrame(rows).sort_values("nll").reset_index(drop=True)

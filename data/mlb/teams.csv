@@ -1,0 +1,31 @@
+team_id,abbrev,name,division_id,league_id,venue_id
+133,ATH,Athletics,200,103,2529
+134,PIT,Pittsburgh Pirates,205,104,31
+135,SD,San Diego Padres,203,104,2680
+136,SEA,Seattle Mariners,200,103,680
+137,SF,San Francisco Giants,203,104,2395
+138,STL,St. Louis Cardinals,205,104,2889
+139,TB,Tampa Bay Rays,201,103,12
+140,TEX,Texas Rangers,200,103,5325
+141,TOR,Toronto Blue Jays,201,103,14
+142,MIN,Minnesota Twins,202,103,3312
+143,PHI,Philadelphia Phillies,204,104,2681
+144,ATL,Atlanta Braves,204,104,4705
+145,CWS,Chicago White Sox,202,103,4
+146,MIA,Miami Marlins,204,104,4169
+147,NYY,New York Yankees,201,103,3313
+158,MIL,Milwaukee Brewers,205,104,32
+108,LAA,Los Angeles Angels,200,103,1
+109,AZ,Arizona Diamondbacks,203,104,15
+110,BAL,Baltimore Orioles,201,103,2
+111,BOS,Boston Red Sox,201,103,3
+112,CHC,Chicago Cubs,205,104,17
+113,CIN,Cincinnati Reds,205,104,2602
+114,CLE,Cleveland Guardians,202,103,5
+115,COL,Colorado Rockies,203,104,19
+116,DET,Detroit Tigers,202,103,2394
+117,HOU,Houston Astros,200,103,2392
+118,KC,Kansas City Royals,202,103,7
+119,LAD,Los Angeles Dodgers,203,104,22
+120,WSH,Washington Nationals,204,104,3309
+121,NYM,New York Mets,204,104,3289

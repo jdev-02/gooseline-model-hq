@@ -7,34 +7,21 @@ class TeamKalman:
     """Joint Kalman filter over team strength ratings plus home-field advantage.
 
     Observation per game: margin = r_home - r_away + hfa + noise (hfa dropped
-    at neutral sites). Random-walk process noise on team ratings is injected
-    whenever the time step (``step_col``) advances, scaled by the number of
-    elapsed steps; between seasons, ratings revert toward the league mean and
-    variance is inflated. Hyperparameters are tuned by maximizing the filter's
-    one-step predictive log-likelihood (empirical Bayes).
-
-    ``step_col="week"`` reproduces the NFL behaviour exactly (dt is always 1).
-    MLB uses ``step_col="day_index"`` so an off-day injects one day of drift
-    and the two games of a doubleheader inject none between them.
+    at neutral sites). Weekly random-walk process noise on team ratings;
+    between seasons, ratings revert toward the league mean and variance is
+    inflated. Hyperparameters are tuned by maximizing the filter's one-step
+    predictive log-likelihood (empirical Bayes).
     """
 
-    def __init__(self, obs_var=170.0, step_q=0.05, season_inflate=2.0,
-                 season_revert=0.8, init_var=25.0, hfa_q=1e-4, burn_in_seasons=2,
-                 step_col="week", init_hfa=2.0, init_hfa_var=4.0, weekly_q=None):
+    def __init__(self, obs_var=170.0, weekly_q=0.05, season_inflate=2.0,
+                 season_revert=0.8, init_var=25.0, hfa_q=1e-4, burn_in_seasons=2):
         self.obs_var = obs_var
-        self.step_q = step_q if weekly_q is None else weekly_q
+        self.weekly_q = weekly_q
         self.season_inflate = season_inflate
         self.season_revert = season_revert
         self.init_var = init_var
         self.hfa_q = hfa_q
         self.burn_in_seasons = burn_in_seasons
-        self.step_col = step_col
-        self.init_hfa = init_hfa
-        self.init_hfa_var = init_hfa_var
-
-    @property
-    def weekly_q(self):
-        return self.step_q
 
     def run(self, df):
         teams = sorted(set(df["home_team"]) | set(df["away_team"]))
@@ -43,32 +30,30 @@ class TeamKalman:
         f = n
 
         x = np.zeros(n + 1)
-        x[f] = self.init_hfa
+        x[f] = 2.0
         P = np.eye(n + 1) * self.init_var
-        P[f, f] = self.init_hfa_var
+        P[f, f] = 4.0
 
         first_season = int(df["season"].min())
-        prev_season, prev_step = None, None
+        prev_season, prev_week = None, None
         diff = np.empty(len(df))
         var = np.empty(len(df))
         hfa_track = np.empty(len(df))
         loglik = 0.0
         n_scored = 0
-        step_col = self.step_col
 
         for i, row in enumerate(df.itertuples(index=False)):
-            season, step = int(row.season), int(getattr(row, step_col))
+            season, week = int(row.season), int(row.week)
             if prev_season is not None and season != prev_season:
                 r = self.season_revert
                 x[:n] *= r
                 P[:n, :] *= r
                 P[:, :n] *= r
                 P[:n, :n] += self.season_inflate * np.eye(n)
-            elif prev_step is not None and step != prev_step:
-                dt = max(1, step - prev_step)
-                P[:n, :n] += self.step_q * dt * np.eye(n)
-                P[f, f] += self.hfa_q * dt
-            prev_season, prev_step = season, step
+            elif prev_week is not None and week != prev_week:
+                P[:n, :n] += self.weekly_q * np.eye(n)
+                P[f, f] += self.hfa_q
+            prev_season, prev_week = season, week
 
             h, a = idx[row.home_team], idx[row.away_team]
             neutral = getattr(row, "location", "Home") == "Neutral"
@@ -103,17 +88,12 @@ class TeamKalman:
         return out
 
 
-def tune_kalman(df, grid=None, train_end_season=2023, **fixed):
-    """Grid-search Kalman hyperparameters by one-step predictive log-likelihood.
-
-    ``fixed`` holds constructor kwargs that are not searched (e.g. step_col,
-    init_hfa). Only seasons <= train_end_season are scored.
-    """
+def tune_kalman(df, grid=None, train_end_season=2023):
     train = df[df["season"] <= train_end_season]
     if grid is None:
         grid = {
             "obs_var": [140.0, 160.0, 180.0],
-            "step_q": [0.02, 0.05, 0.1, 0.2],
+            "weekly_q": [0.02, 0.05, 0.1, 0.2],
             "season_inflate": [1.0, 2.0, 4.0],
             "season_revert": [0.6, 0.75, 0.9],
         }
@@ -121,7 +101,7 @@ def tune_kalman(df, grid=None, train_end_season=2023, **fixed):
     keys = list(grid)
     for combo in product(*grid.values()):
         params = dict(zip(keys, combo))
-        kf = TeamKalman(**params, **fixed)
+        kf = TeamKalman(**params)
         kf.run(train)
         rows.append({**params, "mean_loglik": kf.mean_loglik_})
         if kf.mean_loglik_ > best_ll:

@@ -7,7 +7,8 @@ from datetime import datetime, timezone
 import requests
 
 BASE = "https://external-api.kalshi.com/trade-api/v2"
-DEFAULT_SERIES = ["KXNFLGAME", "KXNFLSPREAD", "KXNFLTOTAL"]
+DEFAULT_SERIES = ["KXNFLGAME", "KXNFLSPREAD", "KXNFLTOTAL",
+                  "KXMLBGAME", "KXMLBSPREAD", "KXMLBTOTAL"]
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS snapshots (
@@ -115,6 +116,7 @@ def snapshot(db_path, series_list):
 
 
 CANDIDATE_SERIES = ["KXNFLGAME", "KXNFLSPREAD", "KXNFLTOTAL", "KXNFLPOINTS",
+                    "KXMLBGAME", "KXMLBSPREAD", "KXMLBTOTAL", "KXMLBRUNLINE",
                     "KXNFLTOTALPOINTS", "KXNFLMARGIN", "KXNFLPROP"]
 
 
@@ -150,8 +152,119 @@ def discover(candidates=None):
     return found
 
 
+# ---------------------------------------------------------------------------
+# Shared price + ticker helpers (used by the NFL and MLB rundowns)
+# ---------------------------------------------------------------------------
+import os
+import re
+
+
+def kalshi_fee(p):
+    return 0.07 * p * (1 - p)
+
+
+def latest_prices(db_path, series_ticker, parse_event):
+    """Latest snapshot per market for one series, grouped by parsed event.
+
+    parse_event(event_ticker, market_ticker) -> (event_key, team) or None.
+    Returns {event_key: {team: {"bid","ask","last"}}}.
+    """
+    if not db_path or not os.path.exists(db_path):
+        return {}
+    con = sqlite3.connect(db_path)
+    rows = con.execute("""
+        SELECT ticker, event_ticker, yes_bid, yes_ask, last_price
+        FROM snapshots WHERE series_ticker=?
+        AND ts_utc = (SELECT MAX(ts_utc) FROM snapshots s2
+                      WHERE s2.ticker = snapshots.ticker)""",
+                       (series_ticker,)).fetchall()
+    con.close()
+    prices = {}
+    for ticker, event, bid, ask, last in rows:
+        parsed = parse_event(event or "", ticker)
+        if not parsed:
+            continue
+        key, team = parsed
+        prices.setdefault(key, {})[team] = {"bid": bid, "ask": ask, "last": last}
+    return prices
+
+
+def latest_snapshot_ts(db_path):
+    if not db_path or not os.path.exists(db_path):
+        return None
+    con = sqlite3.connect(db_path)
+    ts = con.execute("SELECT MAX(ts_utc) FROM snapshots").fetchone()[0]
+    con.close()
+    return ts
+
+
+MLB_TEAMS = frozenset([
+    "ATH", "AZ", "ATL", "BAL", "BOS", "CHC", "CWS", "CIN", "CLE", "COL", "DET",
+    "HOU", "KC", "LAA", "LAD", "MIA", "MIL", "MIN", "NYM", "NYY", "PHI", "PIT",
+    "SD", "SF", "SEA", "STL", "TB", "TEX", "TOR", "WSH", "OAK"])
+# StatsAPI and Kalshi agree on abbreviations today; these aliases exist for
+# Retrosheet / Baseball-Reference style codes if that source is ever added.
+MLB_ALIASES = {"AZ": ["AZ", "ARI"], "CWS": ["CWS", "CHW"], "WSH": ["WSH", "WAS"],
+               "KC": ["KC", "KCR"], "SD": ["SD", "SDP"], "SF": ["SF", "SFG"],
+               "TB": ["TB", "TBR"], "ATH": ["ATH", "OAK"], "LAD": ["LAD", "LA"]}
+MLB_EVENT_RE = re.compile(
+    r"^KXMLBGAME-(\d{2}[A-Z]{3}\d{2})(\d{4})([A-Z]+?)(?:G(\d))?$")
+_MONTHS = {m: i + 1 for i, m in enumerate(
+    ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"])}
+
+
+def split_mlb_pair(pair, market_suffix=None):
+    """Split 'HOUNYY' -> ('HOU', 'NYY'). Team codes are 2-3 chars, so
+    'AZSF', 'CWSMIN', 'KCTOR', 'SDTB' are ambiguous for a naive split; the
+    market ticker's trailing team ('...-NYY') disambiguates when given."""
+    if market_suffix:
+        s = market_suffix
+        if pair.endswith(s) and pair[:-len(s)] in MLB_TEAMS:
+            return pair[:-len(s)], s
+        if pair.startswith(s) and pair[len(s):] in MLB_TEAMS:
+            return s, pair[len(s):]
+    cands = [(pair[:k], pair[k:]) for k in (2, 3)
+             if pair[:k] in MLB_TEAMS and pair[k:] in MLB_TEAMS]
+    return cands[0] if len(cands) == 1 else None
+
+
+def parse_mlb_event(event_ticker, market_ticker=None):
+    """-> {"date": "YYYY-MM-DD", "time_et": "1905", "away", "home",
+            "game_number"} or None."""
+    m = MLB_EVENT_RE.match(event_ticker or "")
+    if not m:
+        return None
+    d, hhmm, pair, gnum = m.groups()
+    suffix = market_ticker.rsplit("-", 1)[-1] if market_ticker else None
+    teams = split_mlb_pair(pair, suffix)
+    if not teams:
+        return None
+    date = f"20{d[:2]}-{_MONTHS[d[2:5]]:02d}-{d[5:]}"
+    return {"date": date, "time_et": hhmm, "away": teams[0], "home": teams[1],
+            "game_number": int(gnum) if gnum else 1}
+
+
+def mlb_event_key(event_ticker, market_ticker):
+    """parse_event callback for latest_prices()."""
+    ev = parse_mlb_event(event_ticker, market_ticker)
+    if not ev:
+        return None
+    team = market_ticker.rsplit("-", 1)[-1]
+    return (ev["date"], ev["away"], ev["home"], ev["game_number"]), team
+
+
+def match_mlb_event(prices, date, away, home, game_number=1):
+    for a in MLB_ALIASES.get(away, [away]):
+        for h in MLB_ALIASES.get(home, [home]):
+            ev = prices.get((str(date), a, h, game_number))
+            if ev:
+                return {(away if k == a else home if k == h else k): v
+                        for k, v in ev.items()}
+    return None
+
+
 def main():
-    ap = argparse.ArgumentParser(description="Kalshi NFL market price logger")
+    ap = argparse.ArgumentParser(description="Kalshi NFL/MLB market price logger")
     ap.add_argument("--db", default="kalshi_prices.db")
     ap.add_argument("--series", nargs="+", default=DEFAULT_SERIES)
     ap.add_argument("--interval-min", type=float, default=10.0)
