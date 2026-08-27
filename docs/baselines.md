@@ -26,23 +26,25 @@ Produced by `uv run python -m src.mlb.run_phase0`, written to
 | home_always | 7289 | 2.9255 | 4.511 | 0.2496 | 0.019 | — | — |
 | elo_lite | 7289 | 2.9129 | 4.454 | 0.2445 | — | yes | — |
 | linear, Tier A (schedule-only features, quick Kalman grid) | 7289 | 2.9090 | 4.437 | 0.2449 | 0.062 | yes | NLL yes, Brier **no** (0.2449 vs 0.2445) |
-| **linear, Tier A + pitcher block** (boxscores 2021–2026, widened Kalman grid) | 7289 | **2.9076** | **4.431** | **0.2438** | 0.071 | **yes** | **yes** |
+| linear, Tier A + pitcher block (boxscores 2021–2026, train from 2015) | 7289 | 2.9076 | 4.431 | 0.2438 | 0.071 | yes | yes |
+| **linear, Tier A + pitcher block, train from 2008** (boxscores 2008–2026) | 7289 | **2.9075** | **4.429** | **0.2436** | **0.064** | **yes** | **yes** |
 
 Embargo check: NLL 2.9075 with `embargo_steps=1` vs 2.9076 without. No
 within-series leakage signal. `assert_no_leakage(r2_ceiling=0.60)` passed on
 every fold (R² = 0.035).
 
-Frozen config (`data/mlb/model_config.json`, 2026-08-27): Kalman
-`obs_var=19, step_q=0.001, season_inflate=0.1, season_revert=0.75`
-(HFA learned at 0.04 runs); ridge `lam=1000`, season half-life 2.0;
-`RECAL_SCALE=0.975`.
+Frozen config (`data/mlb/model_config.json`, 2026-08-27, train from 2008):
+Kalman `obs_var=19, step_q=0.001, season_inflate=0.1, season_revert=0.75`
+(HFA learned at 0.04 runs); ridge `lam=10`, season half-life 4.0;
+`RECAL_SCALE=0.90`.
 
 Reading: the gate passes, narrowly. The pitcher block is worth about 0.0011
-Brier over the schedule-only model and 0.0007 over Elo-lite; on a 4.4-run
-sigma that is a real but small edge, and it is the reason most cards on the
-site are passes. Boxscores before 2021 are not yet cached, so pitcher
-features for 2015–2020 training rows sit at the league mean; backfilling them
-is the next cheap improvement to try.
+Brier over the schedule-only model; extending training history from 2015 back
+to 2008 (with boxscores throughout) adds another 0.0002 and tightens
+calibration from 0.071 to 0.064. On a 4.4-run sigma that is a real but small
+edge, and it is the reason most cards on the site are passes. StatsAPI
+boxscores are reliable back to 2008; 2008 is now the floor of the training
+set.
 
 ## NFL
 

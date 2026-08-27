@@ -10,9 +10,9 @@
     "init_var": 1.0,
     "hfa_q": 1e-05
   },
-  "lam": 1000.0,
-  "half_life_seasons": 2.0,
-  "recal_scale": 0.975,
+  "lam": 10.0,
+  "half_life_seasons": 4.0,
+  "recal_scale": 0.8999999999999999,
   "feature_cols": [
     "kalman_diff",
     "kalman_var",

@@ -30,8 +30,8 @@ MLB_KALMAN_FIXED = dict(step_col="day_index", init_hfa=0.2, init_hfa_var=0.25,
                         init_var=1.0, hfa_q=1e-5)
 
 
-def frame(tier_a_only=False):
-    games = load_games(keep_unplayed=True)
+def frame(tier_a_only=False, first_season=2015):
+    games = load_games(keep_unplayed=True, first_season=first_season)
     park = build_park_factors(games)
     park.to_csv(DATA / "park_factors.csv", index=False)
     team_lookup = None if tier_a_only else load_team_game_stats()
@@ -53,12 +53,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tier-a", action="store_true", help="schedule-only features")
     ap.add_argument("--quick", action="store_true", help="small Kalman grid")
+    ap.add_argument("--first-season", type=int, default=2015)
     args = ap.parse_args()
     FIG.mkdir(parents=True, exist_ok=True)
     import matplotlib.pyplot as plt
     plt.show = lambda *a, **k: None
 
-    df, games = frame(args.tier_a)
+    df, games = frame(args.tier_a, args.first_season)
     cols = TIER_A_COLS if args.tier_a else MLB_FEATURE_COLS
 
     grid = ({"obs_var": [16.0, 20.0], "step_q": [0.005, 0.02],

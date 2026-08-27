@@ -16,7 +16,7 @@ teams_path = DATA / "teams.csv"
 teams = pd.read_csv(teams_path) if teams_path.exists() else pd.DataFrame(fetch_teams(2026))
 teams.to_csv(teams_path, index=False)
 
-games = compile_games(range(2015, 2027), teams=teams)
+games = compile_games(range(2008, 2027), teams=teams)
 games.to_csv(DATA / "games.csv", index=False)
 print(f"games.csv: {len(games)} rows, {int(games.played.sum())} played")
 
