@@ -8,7 +8,7 @@ COLS = ["game_id", "season_type", "posteam", "defteam",
 
 
 def build_team_game_stats(first_season=2010, last_season=2025,
-                          cache_path="team_game_stats.csv", pbp_dir="pbp_cache",
+                          cache_path="data/nfl/team_game_stats.csv", pbp_dir="pbp_cache",
                           wp_filter=None):
     if os.path.exists(cache_path):
         return pd.read_csv(cache_path)

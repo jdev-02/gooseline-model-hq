@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from models import LinearGaussianModel, gaussian_nll
+from src.core.models import LinearGaussianModel, gaussian_nll
 
 
 def season_decay_weights(train_seasons, asof_season, half_life_seasons):

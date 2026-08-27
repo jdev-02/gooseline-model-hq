@@ -1,10 +1,10 @@
 import numpy as np
-from features import load_games, load_team_game_stats, build_features, FEATURE_COLS
-from models import prob_margin_over
-from walkforward import walk_forward, evaluate, tune
+from src.nfl.features import load_games, load_team_game_stats, build_features, FEATURE_COLS
+from src.core.models import prob_margin_over
+from src.core.walkforward import walk_forward, evaluate, tune
 
-games = load_games("games.csv", first_season=2010)
-stats = load_team_game_stats("team_game_stats.csv")
+games = load_games("data/nfl/games.csv", first_season=2010)
+stats = load_team_game_stats("data/nfl/team_game_stats.csv")
 
 lam_grid = [0.0, 10.0, 100.0, 1000.0]
 hl_grid = [2.0, 3.0, 5.0, np.inf]

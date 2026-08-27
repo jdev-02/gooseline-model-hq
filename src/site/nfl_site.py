@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-import rundown as rd
-from features import FEATURE_COLS
-from walkforward import walk_forward
+import src.nfl.rundown as rd
+from src.nfl.features import FEATURE_COLS
+from src.core.walkforward import walk_forward
 
 V3 = rd.V3_COLS
 SPREAD_JUICE = 1.909
@@ -396,8 +396,8 @@ def game_card(r):
             f'<div class="call">{call}</div><div class="gline">{gline}</div>'
             f'<div class="bars">{model_bar}{mkt_bar}</div>{gaptxt}{spread_row}{note}'
             f'{verdict_badge(v)}</div>')
-def build_site(out_path="site.html", games_path="games.csv",
-               stats_path="team_game_stats.csv", db_path="kalshi_prices.db",
+def build_site(out_path="site.html", games_path="data/nfl/games.csv",
+               stats_path="data/nfl/team_game_stats.csv", db_path="kalshi_prices.db",
                horizon_days=8, edge_threshold=0.04):
     df = rd.build_frame(games_path, stats_path)
     hist, by_season, calib = history_tables(df)
@@ -617,8 +617,8 @@ confidence is honest.</p>
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="site.html")
-    ap.add_argument("--games", default="games.csv")
-    ap.add_argument("--stats", default="team_game_stats.csv")
+    ap.add_argument("--games", default="data/nfl/games.csv")
+    ap.add_argument("--stats", default="data/nfl/team_game_stats.csv")
     ap.add_argument("--db", default="kalshi_prices.db")
     ap.add_argument("--days", type=int, default=8)
     args = ap.parse_args()

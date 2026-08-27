@@ -1,14 +1,14 @@
 import numpy as np
 import pandas as pd
-from features import load_games, load_team_game_stats, build_features, FEATURE_COLS
-from kalman import tune_kalman, TeamKalman
-from walkforward import walk_forward, evaluate
-from ensemble import DeepEnsemble
+from src.nfl.features import load_games, load_team_game_stats, build_features, FEATURE_COLS
+from src.core.kalman import tune_kalman, TeamKalman
+from src.core.walkforward import walk_forward, evaluate
+from src.core.ensemble import DeepEnsemble
 
 V2_COLS = ["kalman_diff", "kalman_var"] + FEATURE_COLS + ["qb_fam_diff", "indoor"]
 
-games = load_games("games.csv", first_season=2010)
-stats = load_team_game_stats("team_game_stats.csv")
+games = load_games("data/nfl/games.csv", first_season=2010)
+stats = load_team_game_stats("data/nfl/team_game_stats.csv")
 df = build_features(games, stats, form_half_life_games=8)
 
 best_kf, kf_table = tune_kalman(df, grid={
@@ -35,7 +35,7 @@ print("deep ensemble (het., beta): ", evaluate(ens))
 
 train = df[df["season"] <= 2025]
 model = DeepEnsemble(n_members=5, hidden=16, weight_decay=1e-2, epochs=200, seed=0)
-from walkforward import season_decay_weights
+from src.core.walkforward import season_decay_weights
 sw = season_decay_weights(train["season"].values, 2026, 2.0)
 model.fit(train[V2_COLS].values, train["y"].values, sample_weight=sw)
 print("\n2026 deployment ensemble fit on all data through 2025: ready")

@@ -1,7 +1,32 @@
+# Python / uv
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+*.egg-info/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Local run artifacts
 kalshi_prices.db
 pbp_cache/
 *.parquet
-__pycache__/
 fake_*.db
 site*.html
 old_schema.db
+rundown.html
+
+# NOTE: data/ is intentionally NOT ignored. Compiled games/stats CSVs and the
+# gzipped StatsAPI schedule cache are the asset of this repo.
+# The raw per-game boxscore cache is the one exception: ~29k JSON files, ~5 GB,
+# fully regenerable with `uv run python ops/backfill_mlb.py --boxscore`.
+data/mlb/raw/boxscore/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

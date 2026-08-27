@@ -1,5 +1,4 @@
 import os
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 import argparse
 import os
 import re
@@ -7,11 +6,10 @@ import sqlite3
 import numpy as np
 import pandas as pd
 
-from features import load_games, load_team_game_stats, build_features, FEATURE_COLS
-from kalman import TeamKalman
-from models import LinearGaussianModel
-from walkforward import season_decay_weights
-from ensemble import DeepEnsemble
+from src.nfl.features import load_games, load_team_game_stats, build_features, FEATURE_COLS
+from src.core.kalman import TeamKalman
+from src.core.models import LinearGaussianModel
+from src.core.walkforward import season_decay_weights
 
 KALMAN_PARAMS = {"obs_var": 150.0, "weekly_q": 0.8, "season_inflate": 8.0,
                  "season_revert": 0.7}
@@ -40,6 +38,7 @@ def build_frame(games_path, stats_path):
 
 
 def fit_models(df, asof_season):
+    from src.core.ensemble import DeepEnsemble  # torch is an optional extra
     train = df[df["result"].notna()]
     sw = season_decay_weights(train["season"].values, asof_season, DECAY_HL)
     X, y = train[V3_COLS].values, train["y"].values
@@ -187,7 +186,7 @@ def render_html(table, trained_through, out_path="rundown.html"):
     return out_path
 
 
-def rundown(games_path="games.csv", stats_path="team_game_stats.csv",
+def rundown(games_path="data/nfl/games.csv", stats_path="data/nfl/team_game_stats.csv",
             db_path="kalshi_prices.db", horizon_days=8, edge_threshold=0.04,
             html_out=None):
     df = build_frame(games_path, stats_path)
@@ -258,8 +257,8 @@ def rundown(games_path="games.csv", stats_path="team_game_stats.csv",
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--games", default="games.csv")
-    ap.add_argument("--stats", default="team_game_stats.csv")
+    ap.add_argument("--games", default="data/nfl/games.csv")
+    ap.add_argument("--stats", default="data/nfl/team_game_stats.csv")
     ap.add_argument("--db", default="kalshi_prices.db")
     ap.add_argument("--days", type=int, default=8)
     ap.add_argument("--edge", type=float, default=0.04)
