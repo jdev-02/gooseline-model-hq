@@ -1,6 +1,6 @@
 date,game_pk,away,home,home_sp,away_sp,mu,sigma,p_home,mkt_home,mkt_away,edge,verdict,narrative_shift,mu_narrative,sigma_narrative,p_home_narrative,edge_narrative,verdict_narrative,note,run_ts,result
 2026-08-27,822771,KC,TOR,Spencer Arrighetti,Noah Cameron,-0.33,4.46,0.47,0.5,0.51,0.003,pass,0.0,-0.33,4.46,0.47,0.003,pass,,2026-08-27T19:02:19+00:00,
 2026-08-27,823179,AZ,SF,Landen Roupp,Jose Cabrera,-0.24,4.46,0.478,0.5,0.51,-0.006,pass,0.0,-0.24,4.46,0.478,-0.006,pass,,2026-08-27T19:02:19+00:00,
-2026-08-27,823503,HOU,NYY,Gerrit Cole,Hayden Wesneski,0.91,4.46,0.583,0.6,0.41,-0.01,pass,0.35,1.26,4.46,0.614,-0.003,pass,Cole vs Wesneski. Series split so far. Yankees 7-3 last ten and playing playoff baseball trying to catch the top of the league; Astros 3-7 last ten and drifting around .500.,2026-08-27T19:02:19+00:00,
+2026-08-27,823503,HOU,NYY,Gerrit Cole,Hayden Wesneski,0.91,4.46,0.583,0.6,0.41,-0.01,pass,0.35,1.26,4.46,0.614,-0.003,pass,Cole vs Wesneski. Series split so far. Yankees 7-3 last ten and playing playoff baseball trying to catch the top of the league; Astros 3-7 last ten and drifting around .500.,2026-08-27T19:02:19+00:00,-4.0
 2026-08-27,823581,MIL,NYM,Sean Manaea,Jacob Misiorowski,-1.35,4.46,0.378,0.36,0.66,0.002,pass,0.0,-1.35,4.46,0.378,0.002,pass,,2026-08-27T19:02:19+00:00,
 2026-08-27,824879,LAD,ATL,Chris Sale,Yoshinobu Yamamoto,-0.05,4.46,0.496,0.54,0.47,0.017,pass,0.0,-0.05,4.46,0.496,0.017,pass,,2026-08-27T19:02:19+00:00,
