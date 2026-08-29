@@ -1,0 +1,39 @@
+name: mlb-totals
+
+# Evaluates the total-runs model against its baselines and freezes its config.
+# Manual for now: it does not price anything on the site until it passes the
+# gate in docs/baselines.md.
+on:
+  workflow_dispatch:
+    inputs:
+      first_season:
+        description: "First training season"
+        default: "2008"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: model-hq-data
+  cancel-in-progress: false
+
+jobs:
+  totals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+      - run: uv sync --no-dev
+      - run: uv run python ops/run_totals.py --first-season ${{ inputs.first_season }}
+      - name: commit
+        run: |
+          git config user.name "model-hq-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add figures/mlb/totals data/mlb/totals_config.json
+          git diff --cached --quiet && exit 0
+          git commit -m "data(mlb): totals model evaluation"
+          git pull --rebase origin main
+          git push origin HEAD:main
