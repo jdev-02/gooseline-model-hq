@@ -25,7 +25,8 @@ from src.core.walkforward import walk_forward, evaluate, tune  # noqa: E402
 from src.mlb.compile import DATA, load_games, load_team_game_stats, load_pitcher_game_stats  # noqa: E402
 from src.mlb.park import build_park_factors, park_lookup  # noqa: E402
 from src.mlb.totals import (build_total_features, TOTAL_FEATURE_COLS, prob_over,
-                            LeagueMeanTotal, ParkAdjustedMeanTotal)  # noqa: E402
+                            LeagueMeanTotal, ParkAdjustedMeanTotal,
+                            NegBinomTotal)  # noqa: E402
 
 FIG = Path("figures/mlb/totals")
 VAL_SEASON = 2022
@@ -112,6 +113,44 @@ for line in LINES:
     dev = [abs(r[2] - r[3]) for r in rel if r[4] >= 50]
     print(f"    max calibration deviation: {max(dev):.3f}" if dev else "    (thin)")
 
+# ---- negative binomial: the count-aware version ----
+print("\n=== negative binomial (log link, fitted overdispersion) ===")
+nb_rows = []
+for s in TEST_SEASONS:
+    p = walk_forward(df, TOTAL_FEATURE_COLS, s, step_col="day_index",
+                     refit_every=7, min_train=2000,
+                     half_life_seasons=best["half_life_seasons"],
+                     model_factory=lambda: NegBinomTotal())
+    nb_rows.append(p)
+nbp = pd.concat(nb_rows)
+nb_met = evaluate(nbp)
+
+# Refit once on everything before the test window to score the count NLL and
+# the O/U ladder with the actual negative-binomial law, not a Gaussian proxy.
+tr = df[(df["season"] < TEST_SEASONS[0]) & df["y"].notna()]
+te = df[df["season"].isin(TEST_SEASONS) & df["y"].notna()]
+nb = NegBinomTotal().fit(tr[TOTAL_FEATURE_COLS].values, tr["y"].values)
+Xte, yte = te[TOTAL_FEATURE_COLS].values, te["y"].values
+nb_nll = float(nb.nll(Xte, yte).mean())
+print(f"dispersion k = {nb.k_:.1f} (lower = fatter tail; Poisson is k -> inf)")
+print(f"count NLL {nb_nll:.4f}  rmse {nb_met['rmse']:.4f}")
+b85_nb = brier_score((yte > 8.5).astype(float), nb.prob_over(Xte, 8.5))
+results.append({"model": "negbinom_totals", **nb_met, "brier_8.5": b85_nb,
+                "count_nll": nb_nll})
+print(f"brier@8.5 {b85_nb:.4f}")
+print("\nNegative-binomial calibration at the traded lines:")
+for line in LINES:
+    p_over = nb.prob_over(Xte, line)
+    y_over = (yte > line).astype(float)
+    base = float(y_over.mean())
+    print(f"  O/U {line}: brier {brier_score(y_over, p_over):.4f} vs floor "
+          f"{base*(1-base):.4f}  (overs {base*100:.1f}%, model {p_over.mean()*100:.1f}%)")
+    fig, rel = reliability_diagram(y_over, p_over, n_bins=10, label=f"nb_over_{line}")
+    fig.savefig(FIG / f"nb_reliability_{line}.png", dpi=120)
+    dev = [abs(r[2] - r[3]) for r in rel if r[4] >= 50]
+    if dev:
+        print(f"    max calibration deviation: {max(dev):.3f}")
+
 out = pd.DataFrame(results)
 out.to_csv(FIG / "totals_results.csv", index=False)
 print("\n", out.round(4).to_string(index=False))
@@ -120,6 +159,11 @@ cfg = {"lam": best["lam"], "half_life_seasons": best["half_life_seasons"],
        "first_season": args.first_season}
 (DATA / "totals_config.json").write_text(json.dumps(cfg, indent=2, default=float))
 
-beat = (met["nll"] < min(r["nll"] for r in results[:2])
-        and b85 < min(r["brier_8.5"] for r in results[:2]))
-print("\nGATE (beats both baselines on NLL and Brier@8.5):", "PASS" if beat else "FAIL")
+base_brier = min(r["brier_8.5"] for r in results[:2])
+base_rmse = min(r["rmse"] for r in results[:2])
+gauss = met["nll"] < min(r["nll"] for r in results[:2]) and b85 < base_brier
+nbeat = b85_nb < base_brier and nb_met["rmse"] < base_rmse
+print("\nGATE gaussian (NLL + Brier@8.5 vs baselines):", "PASS" if gauss else "FAIL")
+print("GATE negbinom (Brier@8.5 + RMSE vs baselines):", "PASS" if nbeat else "FAIL")
+print("Ship the negative binomial only if its gate passes AND every populated "
+      "decile above is inside 0.10.")

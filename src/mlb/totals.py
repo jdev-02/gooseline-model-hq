@@ -180,3 +180,68 @@ def prob_over(mu, sigma, strike):
     continuity correction is needed: floor_strike 8.5 means 9 runs or more."""
     from scipy.stats import norm
     return 1.0 - norm.cdf((strike - np.asarray(mu)) / np.asarray(sigma))
+
+
+class NegBinomTotal:
+    """Negative-binomial regression on total runs, log link.
+
+    The Gaussian version got the mean right and the shape wrong: runs are
+    non-negative integer counts with a fat right tail (big innings cluster),
+    so a symmetric bell misprices exactly the outcomes the O/U ladder is
+    made of. Poisson alone is too tight because baseball is overdispersed;
+    the negative binomial adds the extra variance as a fitted parameter.
+
+    Mean comes from sklearn's PoissonRegressor (a log-link GLM, consistent
+    under overdispersion); the dispersion is then fit by method of moments,
+    Var = mu + mu^2 / k.
+    """
+
+    name = "negbinom_totals"
+
+    def __init__(self, alpha=1e-4, max_iter=300):
+        self.alpha = alpha
+        self.max_iter = max_iter
+
+    def fit(self, X, y, sample_weight=None):
+        from sklearn.linear_model import PoissonRegressor
+        X = np.asarray(X, dtype=float)
+        y = np.asarray(y, dtype=float)
+        self.x_mean_, self.x_std_ = X.mean(axis=0), X.std(axis=0)
+        self.x_std_[self.x_std_ == 0] = 1.0
+        Z = (X - self.x_mean_) / self.x_std_
+        self.glm_ = PoissonRegressor(alpha=self.alpha, max_iter=self.max_iter)
+        self.glm_.fit(Z, y, sample_weight=sample_weight)
+        mu = self.glm_.predict(Z)
+        w = np.ones(len(y)) if sample_weight is None else np.asarray(sample_weight)
+        var = np.average((y - mu) ** 2, weights=w)
+        mbar = np.average(mu, weights=w)
+        excess = var - mbar
+        self.k_ = float(mbar ** 2 / excess) if excess > 1e-6 else 1e6
+        return self
+
+    def _mu(self, X):
+        Z = (np.asarray(X, dtype=float) - self.x_mean_) / self.x_std_
+        return self.glm_.predict(Z)
+
+    def predict_dist(self, X):
+        """Mean and sd, so the walk-forward harness can score it unchanged."""
+        mu = self._mu(X)
+        return mu, np.sqrt(mu + mu ** 2 / self.k_)
+
+    def _nb_params(self, X):
+        mu = self._mu(X)
+        n = self.k_
+        return mu, n, n / (n + mu)
+
+    def prob_over(self, X, strike):
+        """P(total > strike) under the fitted negative binomial."""
+        from scipy.stats import nbinom
+        mu, n, p = self._nb_params(X)
+        return 1.0 - nbinom.cdf(np.floor(strike), n, p)
+
+    def nll(self, X, y):
+        """Per-game negative log-likelihood, comparable across models only
+        against another *count* likelihood, never against the Gaussian one."""
+        from scipy.stats import nbinom
+        mu, n, p = self._nb_params(X)
+        return -nbinom.logpmf(np.asarray(y, dtype=int), n, p)
