@@ -150,9 +150,12 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
           "(scratches, lineups, weather) before acting; the model cannot see them.")
     if log_path:
         Path(log_path).parent.mkdir(parents=True, exist_ok=True)
-        table.assign(run_ts=pd.Timestamp.utcnow().isoformat(timespec="seconds"),
-                     result=np.nan).to_csv(log_path, mode="a", index=False,
-                                          header=not Path(log_path).exists())
+        new = table.assign(run_ts=pd.Timestamp.utcnow().isoformat(timespec="seconds"),
+                           result=np.nan)
+        if Path(log_path).exists():
+            # schema-tolerant append: new columns become NaN on old rows
+            new = pd.concat([pd.read_csv(log_path), new], ignore_index=True)
+        new.to_csv(log_path, index=False)
     return table
 
 
