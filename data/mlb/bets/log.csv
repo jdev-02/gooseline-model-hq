@@ -1,3 +1,4 @@
 date,game,legs,book,stake,odds,result,model_p_home,model_verdict,rationale
 2026-08-27,HOU@NYY,"Bellinger 2+ total bases; Cole 5+ strikeouts",,,,lost,0.583,pass,"Prop parlay. Cole went 5+ shutout innings but not on strikeouts."
 2026-08-28,BOS@NYY,"NYY moneyline; Schlittler 6+ strikeouts",,,,won,,,"Yankees hot overall; Friday night at home; lost last series to Houston in NY so a bounce-back spot; Schlittler pitched big in last year's playoffs against Boston and would gut it out."
+2026-08-29,BOS@NYY G1,"Over 7.5 total runs",Kalshi,7.78,,,,"no model opinion (totals model failed its gate)","Reasoning was that the previous night was low scoring. Model prices margin, not totals; totals model built 2026-08-29 did not beat league-mean or park-adjusted baselines and prices nothing."
