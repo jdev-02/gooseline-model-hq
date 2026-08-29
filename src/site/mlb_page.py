@@ -27,10 +27,15 @@ def american(p):
 
 
 def fav_line(mu, home, away):
-    """MLB has one spread that matters, so state the side at +/-1.5."""
+    """State the model's own predicted margin, not the book's run line.
+
+    Printing "-1.5" here regardless of mu implied the model favored a side by
+    a run and a half when it often predicts a tenth of a run, and it
+    contradicted the run-line row on the same card.
+    """
     if abs(mu) < 0.05:
         return "pick'em"
-    return f"{home if mu > 0 else away} -1.5"
+    return f"{home if mu > 0 else away} by {abs(mu):.1f}"
 
 
 def img_tag(path):
@@ -43,6 +48,8 @@ def img_tag(path):
 
 def verdict_badge(v):
     v = str(v)
+    if v.startswith("STALE"):
+        return f'<span class="verdict v-caut">{v}</span>'
     if v.startswith("HIGH VALUE"):
         return f'<span class="verdict v-high">{v}</span>'
     if v.startswith("CAUTIOUS"):
@@ -92,9 +99,19 @@ def game_card(r):
                    f'<div class="btrack"><div class="bfill mkt" '
                    f'style="width:{mk*100:.1f}%"></div></div>'
                    f'<span class="bval">{mk*100:.0f}&cent;</span></div>')
+        age = r.get("price_age_min")
+        if age is None:
+            agetxt = ""
+        elif age <= 2:
+            agetxt = ' &middot; price fetched live'
+        elif age <= 15:
+            agetxt = f' &middot; price {age:.0f} min old'
+        else:
+            agetxt = (f' &middot; <span style="color:var(--yellow)">price {age:.0f} min '
+                      f'old, the market has probably moved</span>')
         gaptxt = (f'<div class="gap">Both bars: chance the home team wins. '
                   f'Disagreement: <b>{gap:+.0f}</b> points of probability '
-                  f'{"toward" if gap > 0 else "against"} {r["home"]}</div>')
+                  f'{"toward" if gap > 0 else "against"} {r["home"]}{agetxt}</div>')
     else:
         mkt_bar = ('<div class="brow"><span class="blab">Market price</span>'
                    '<div class="btrack"></div><span class="bval">&mdash;</span></div>')
@@ -105,7 +122,7 @@ def game_card(r):
     if r.get("p_home_cover") is not None and not pd.isna(r.get("p_home_cover")):
         ph_c, pa_c = float(r["p_home_cover"]), float(r["p_away_cover"])
         side, p = ((r["home"], ph_c) if ph_c >= pa_c else (r["away"], pa_c))
-        line = "-1.5" if side == (r["home"] if ph_c >= pa_c else r["away"]) and p == max(ph_c, pa_c) else "-1.5"
+        line = "-1.5"
         breakeven = 1 / RUNLINE_JUICE
         if p >= breakeven + 0.05:
             tag = '<span class="hit">value at a book\'s run line</span>'

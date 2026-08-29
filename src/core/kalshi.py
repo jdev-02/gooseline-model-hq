@@ -189,6 +189,37 @@ def latest_prices(db_path, series_ticker, parse_event):
     return prices
 
 
+def live_prices(series_ticker, parse_event, status="open"):
+    """Fetch prices straight from Kalshi right now, bypassing the snapshot log.
+
+    A logged price goes stale fast: MLB moneylines move hardest in the hour
+    before first pitch, which is exactly when a rundown is read. Same return
+    shape as latest_prices(), plus an 'asof' UTC timestamp on every quote.
+    """
+    from datetime import datetime, timezone
+    session = requests.Session()
+    ts = datetime.now(timezone.utc)
+    try:
+        markets = fetch_series_markets(session, series_ticker, status=status)
+    except Exception as e:
+        print(f"live price fetch failed ({e}); falling back to the snapshot log",
+              file=sys.stderr)
+        return {}
+    prices = {}
+    for m in markets:
+        parsed = parse_event(m.get("event_ticker") or "", m.get("ticker") or "")
+        if not parsed:
+            continue
+        key, team = parsed
+        prices.setdefault(key, {})[team] = {
+            "bid": price(m, "yes_bid_dollars", "yes_bid"),
+            "ask": price(m, "yes_ask_dollars", "yes_ask"),
+            "last": price(m, "last_price_dollars", "last_price"),
+            "asof": ts,
+        }
+    return prices
+
+
 def latest_snapshot_ts(db_path):
     if not db_path or not os.path.exists(db_path):
         return None

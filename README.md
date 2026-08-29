@@ -35,7 +35,7 @@ uv sync --extra dev            # add --extra torch for the deep ensemble (CPU wh
 uv run pytest
 
 # MLB data (Tier A is enough to run; Tier B adds the pitcher block)
-uv run python ops/backfill_mlb.py --schedule --seasons 2015-2026
+uv run python ops/backfill_mlb.py --schedule --seasons 2008-2026
 uv run python ops/backfill_mlb.py --boxscore --seasons 2026,2025,2024,2023,2022,2021
 
 # Evaluate (baselines, walk-forward 2023-2025, calibration) and freeze config
@@ -65,7 +65,7 @@ uv run python -m src.site.build --mlb-narrative data/mlb/narrative/2026-08-27.ya
 5. **Narrative edge**: a human YAML entry per game shifts the margin by at
    most one run and always widens sigma; both streams are logged and scored.
 6. **Rundown**: compare with the latest Kalshi ask minus the 7% fee.
-   `CANDIDATE` means edge above 4%; most games are passes, by design.
+   `HIGH VALUE` means edge above 4% on a price fetched live; most games are passes, by design.
 
 ## Process
 

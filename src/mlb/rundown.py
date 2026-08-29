@@ -16,7 +16,8 @@ import pandas as pd
 from scipy.stats import norm
 
 from src.core.kalman import TeamKalman
-from src.core.kalshi import kalshi_fee, latest_prices, mlb_event_key, match_mlb_event
+from src.core.kalshi import (kalshi_fee, latest_prices, latest_snapshot_ts,
+                             live_prices, mlb_event_key, match_mlb_event)
 from src.core.models import LinearGaussianModel, prob_margin_over
 from src.core.walkforward import season_decay_weights
 from src.mlb.compile import DATA, load_games, load_team_game_stats, load_pitcher_game_stats
@@ -28,12 +29,21 @@ from src.mlb.park import build_park_factors, park_lookup
 UPCOMING_STATES = {"Scheduled", "Pre-Game", "Warmup", "Delayed Start"}
 RUN_LINE = 1.5          # the standard MLB spread
 HIGH_VALUE_EDGE = 0.04  # same threshold David uses for NFL
+STALE_MINUTES = 15      # past this, a price is not actionable
 
 
-def verdict_for(edge, side):
-    """Three-tier verdict, worded exactly as the NFL page."""
+def verdict_for(edge, side, price_age_min=None):
+    """Three-tier verdict, worded exactly as the NFL page.
+
+    A stale price is the most dangerous output this system can produce: a
+    HIGH VALUE badge computed against a quote the market has already moved
+    past looks identical to a live one. So staleness downgrades the badge
+    rather than being reported alongside it.
+    """
     if edge is None:
         return "no price"
+    if price_age_min is not None and price_age_min > STALE_MINUTES:
+        return f"STALE PRICE &mdash; re-check before acting ({price_age_min:.0f} min old)"
     if edge > HIGH_VALUE_EDGE:
         return f"HIGH VALUE &mdash; {side}"
     if edge > 0:
@@ -100,7 +110,8 @@ def try_ensemble(df, cfg, asof_season, cols):
 
 
 def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrative_path=None,
-            use_ensemble=False, log_path=DATA / "narrative" / "log.csv", asof=None):
+            use_ensemble=False, log_path=DATA / "narrative" / "log.csv", asof=None,
+            use_live_prices=True):
     cfg = load_config()
     cols = cfg["feature_cols"]
     today = pd.Timestamp(asof or date.today()).normalize()
@@ -125,8 +136,13 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
     sigma = np.where(sp_unknown, sigma * 1.10, sigma)
     recal = float(cfg.get("recal_scale", 1.0))
     p_home = norm.cdf(mu / (recal * sigma))
-    prices = latest_prices(db_path, "KXMLBGAME", mlb_event_key)
+    prices = live_prices("KXMLBGAME", mlb_event_key) if use_live_prices else {}
+    price_source = "live"
+    if not prices:
+        prices = latest_prices(db_path, "KXMLBGAME", mlb_event_key)
+        price_source = "snapshot log"
     narr = load_narrative(narrative_path)
+    now = pd.Timestamp.now(tz="UTC")
 
     rows = []
     for j, r in enumerate(up.itertuples(index=False)):
@@ -149,20 +165,27 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
         if ev:
             hp, ap_ = ev.get(r.home_team, {}).get("ask"), ev.get(r.away_team, {}).get("ask")
             rec["mkt_home"], rec["mkt_away"] = hp, ap_
+            asof = ev.get(r.home_team, {}).get("asof") or ev.get(r.away_team, {}).get("asof")
+            age = ((now - pd.Timestamp(asof)).total_seconds() / 60.0) if asof is not None else None
+            if age is None and price_source != "live":
+                ts = latest_snapshot_ts(db_path)
+                age = ((now - pd.Timestamp(ts).tz_localize("UTC")).total_seconds() / 60.0
+                       if ts else None)
+            rec["price_age_min"] = None if age is None else round(age, 1)
             for p, ek, vk in ((p_home[j], "edge", "verdict"), (p_n, "edge_narrative", "verdict_narrative")):
                 e_h = (p - hp - kalshi_fee(hp)) if hp is not None else -1
                 e_a = ((1 - p) - ap_ - kalshi_fee(ap_)) if ap_ is not None else -1
                 best, side = max((e_h, r.home_team), (e_a, r.away_team))
                 rec[ek] = round(float(best), 3)
-                rec[vk] = verdict_for(best, side)
+                rec[vk] = verdict_for(best, side, age)
         rows.append(rec)
     table = pd.DataFrame(rows)
     trained = df[df["y"].notna()]
     print(f"\n=== MLB rundown {today.date()} (+{days - 1}d), trained through "
           f"{trained['gameday'].max().date()} on {len(trained)} games, "
-          f"{'ensemble' if ens is not None else 'linear'} ===")
+          f"{'ensemble' if ens is not None else 'linear'}, prices: {price_source} ===")
     print(table.drop(columns=["note"]).to_string(index=False))
-    print("\nCANDIDATE = model edge over Kalshi ask after 7% fee. Apply the news check "
+    print("\nHIGH VALUE = model edge over the Kalshi ask after the 7% fee. Apply the news check "
           "(scratches, lineups, weather) before acting; the model cannot see them.")
     if log_path:
         Path(log_path).parent.mkdir(parents=True, exist_ok=True)
@@ -184,6 +207,9 @@ if __name__ == "__main__":
     ap.add_argument("--ensemble", action="store_true")
     ap.add_argument("--asof", default=None, help="YYYY-MM-DD (default today)")
     ap.add_argument("--no-log", action="store_true")
+    ap.add_argument("--snapshot-prices", action="store_true",
+                    help="read the sqlite log instead of fetching live prices")
     a = ap.parse_args()
     rundown(a.days, a.db, a.edge, a.narrative, a.ensemble,
-            None if a.no_log else DATA / "narrative" / "log.csv", a.asof)
+            None if a.no_log else DATA / "narrative" / "log.csv", a.asof,
+            use_live_prices=not a.snapshot_prices)

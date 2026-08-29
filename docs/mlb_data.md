@@ -17,7 +17,7 @@ league mean). Tier B is ~29k requests / ~5 GB and is gitignored;
 `ops/backfill_mlb.py --boxscore` regenerates it, resumably.
 
 ```
-uv run python ops/backfill_mlb.py --schedule --seasons 2015-2026
+uv run python ops/backfill_mlb.py --schedule --seasons 2008-2026
 uv run python ops/backfill_mlb.py --boxscore --seasons 2026,2025,2024,2023,2022,2021 --workers 8
 uv run python -c "from src.mlb.compile import *; ..."   # see run_phase0 / README
 ```
