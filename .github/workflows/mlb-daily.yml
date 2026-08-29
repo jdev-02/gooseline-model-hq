@@ -1,0 +1,45 @@
+name: mlb-daily
+
+# 11:00 ET: refresh the current season's schedule, fill in yesterday's results,
+# run the rundown against the latest logged prices, rebuild the site.
+on:
+  schedule:
+    - cron: "0 15 * * *"         # 11:00 ET (EDT)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: model-hq-data
+  cancel-in-progress: false
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+      - run: uv sync --no-dev
+      - name: refresh current season schedule and games.csv
+        run: |
+          uv run python ops/backfill_mlb.py --schedule --seasons 2026 --force
+          uv run python ops/compile_mlb.py --games-only
+      - name: fill results into the narrative log
+        run: uv run python ops/settle_log.py
+      - name: rundown + site
+        run: |
+          uv run python -m src.mlb.rundown --days 1 --db data/kalshi_prices.db
+          uv run python -m src.site.build --db data/kalshi_prices.db
+      - name: commit
+        run: |
+          git config user.name "model-hq-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/mlb/raw/schedule/2026.json.gz data/mlb/games.csv data/mlb/narrative/log.csv docs/index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "data(mlb): daily rundown $(date -u +%Y-%m-%d)"
+          git pull --rebase origin main
+          git push origin HEAD:main

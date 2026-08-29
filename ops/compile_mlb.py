@@ -20,6 +20,8 @@ games = compile_games(range(2008, 2027), teams=teams)
 games.to_csv(DATA / "games.csv", index=False)
 print(f"games.csv: {len(games)} rows, {int(games.played.sum())} played")
 
+if "--games-only" in sys.argv:
+    sys.exit(0)
 team_stats, pitcher_stats = compile_boxscores(games)
 if len(team_stats):
     team_stats.to_csv(DATA / "team_game_stats.csv", index=False)

@@ -177,7 +177,7 @@ ended. Positive shift favors the home team.</p>
 </div>"""
 
 
-def build(out="docs/index.html", narrative=None, days=1, db="kalshi_prices.db"):
+def build(out="docs/index.html", narrative=None, days=1, db="data/kalshi_prices.db"):
     today = pd.Timestamp.today().date()
     # NFL page: David's site, verbatim, body extracted
     tmp = Path("site_nfl_tmp.html")
@@ -209,6 +209,6 @@ if __name__ == "__main__":
     ap.add_argument("--out", default="docs/index.html")
     ap.add_argument("--mlb-narrative", default=None)
     ap.add_argument("--days", type=int, default=1)
-    ap.add_argument("--db", default="kalshi_prices.db")
+    ap.add_argument("--db", default="data/kalshi_prices.db")
     a = ap.parse_args()
     build(a.out, a.mlb_narrative, a.days, a.db)

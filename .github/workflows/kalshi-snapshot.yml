@@ -1,0 +1,38 @@
+name: kalshi-snapshot
+
+# Logs NFL + MLB Kalshi prices every ~30 min, 10:00-24:00 ET, and commits the
+# sqlite log back to main so a laptop that is often offline still has a
+# continuous price history to pull.
+on:
+  schedule:
+    - cron: "*/30 14-23 * * *"   # 10:00-19:30 ET (EDT = UTC-4)
+    - cron: "*/30 0-3 * * *"     # 20:00-23:30 ET
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: model-hq-data
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+      - run: uv sync --no-dev
+      - run: uv run python ops/kalshi_snapshot.py --db data/kalshi_prices.db
+      - name: commit
+        run: |
+          git config user.name "model-hq-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/kalshi_prices.db
+          git diff --cached --quiet && exit 0
+          git commit -m "data(kalshi): snapshot $(date -u +%Y-%m-%dT%H:%MZ)"
+          git pull --rebase origin main
+          git push origin HEAD:main

@@ -11,7 +11,7 @@ __pycache__/
 !.env.example
 
 # Local run artifacts
-kalshi_prices.db
+/kalshi_prices.db
 pbp_cache/
 *.parquet
 fake_*.db

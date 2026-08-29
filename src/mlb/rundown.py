@@ -86,7 +86,7 @@ def try_ensemble(df, cfg, asof_season, cols):
         train[cols].values, train["y"].values, sample_weight=sw)
 
 
-def rundown(days=1, db_path="kalshi_prices.db", edge_threshold=0.04, narrative_path=None,
+def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrative_path=None,
             use_ensemble=False, log_path=DATA / "narrative" / "log.csv", asof=None):
     cfg = load_config()
     cols = cfg["feature_cols"]
@@ -154,7 +154,7 @@ def rundown(days=1, db_path="kalshi_prices.db", edge_threshold=0.04, narrative_p
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--days", type=int, default=1)
-    ap.add_argument("--db", default="kalshi_prices.db")
+    ap.add_argument("--db", default="data/kalshi_prices.db")
     ap.add_argument("--edge", type=float, default=0.04)
     ap.add_argument("--narrative", default=None)
     ap.add_argument("--ensemble", action="store_true")
