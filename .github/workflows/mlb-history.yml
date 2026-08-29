@@ -1,0 +1,36 @@
+name: mlb-history
+
+# Rebuilds the Track Record tab's per-game walk-forward history. Expensive
+# (three seasons of weekly refits), so weekly rather than daily.
+on:
+  schedule:
+    - cron: "0 12 * * 1"        # Mondays 08:00 ET
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: model-hq-data
+  cancel-in-progress: false
+
+jobs:
+  history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+      - run: uv sync --no-dev
+      - run: uv run python ops/export_history.py --seasons 2023,2024,2025
+      - name: commit
+        run: |
+          git config user.name "model-hq-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/mlb/mlb_history.csv
+          git diff --cached --quiet && exit 0
+          git commit -m "data(mlb): refresh walk-forward track record"
+          git pull --rebase origin main
+          git push origin HEAD:main

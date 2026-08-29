@@ -17,7 +17,7 @@ from scipy.stats import norm
 
 from src.core.kalman import TeamKalman
 from src.core.kalshi import kalshi_fee, latest_prices, mlb_event_key, match_mlb_event
-from src.core.models import LinearGaussianModel
+from src.core.models import LinearGaussianModel, prob_margin_over
 from src.core.walkforward import season_decay_weights
 from src.mlb.compile import DATA, load_games, load_team_game_stats, load_pitcher_game_stats
 from src.mlb.features import build_features, MLB_FEATURE_COLS
@@ -26,6 +26,19 @@ from src.mlb.narrative import load_narrative, apply_narrative
 from src.mlb.park import build_park_factors, park_lookup
 
 UPCOMING_STATES = {"Scheduled", "Pre-Game", "Warmup", "Delayed Start"}
+RUN_LINE = 1.5          # the standard MLB spread
+HIGH_VALUE_EDGE = 0.04  # same threshold David uses for NFL
+
+
+def verdict_for(edge, side):
+    """Three-tier verdict, worded exactly as the NFL page."""
+    if edge is None:
+        return "no price"
+    if edge > HIGH_VALUE_EDGE:
+        return f"HIGH VALUE &mdash; {side}"
+    if edge > 0:
+        return f"CAUTIOUS &mdash; small edge on {side}"
+    return "NO VALUE at current price"
 
 
 def load_config():
@@ -128,6 +141,9 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
                "narrative_shift": round(shift, 2), "mu_narrative": round(mu_n, 2),
                "sigma_narrative": round(sg_n, 3), "p_home_narrative": round(p_n, 3),
                "edge_narrative": None, "verdict_narrative": "no price",
+               "run_line": RUN_LINE,
+               "p_home_cover": round(float(prob_margin_over(mu[j], sigma[j], RUN_LINE)), 3),
+               "p_away_cover": round(float(1 - prob_margin_over(mu[j], sigma[j], -RUN_LINE)), 3),
                "note": ent.note if ent else ""}
         ev = match_mlb_event(prices, r.gameday.date(), r.away_team, r.home_team, int(r.game_number))
         if ev:
@@ -138,7 +154,7 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
                 e_a = ((1 - p) - ap_ - kalshi_fee(ap_)) if ap_ is not None else -1
                 best, side = max((e_h, r.home_team), (e_a, r.away_team))
                 rec[ek] = round(float(best), 3)
-                rec[vk] = f"CANDIDATE {side}" if best > edge_threshold else "pass"
+                rec[vk] = verdict_for(best, side)
         rows.append(rec)
     table = pd.DataFrame(rows)
     trained = df[df["y"].notna()]
