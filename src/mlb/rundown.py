@@ -118,13 +118,18 @@ def refresh_probables(games, start, end):
     upd = {}
     for d in live.get("dates", []):
         for g in d["games"]:
-            upd[g["gamePk"]] = (g["teams"]["home"].get("probablePitcher", {}).get("id"),
-                                g["teams"]["away"].get("probablePitcher", {}).get("id"),
+            hp = g["teams"]["home"].get("probablePitcher", {})
+            ap_ = g["teams"]["away"].get("probablePitcher", {})
+            upd[g["gamePk"]] = (hp.get("id"), ap_.get("id"),
+                                hp.get("fullName"), ap_.get("fullName"),
                                 g["status"].get("detailedState"))
-    for pk, (hsp, asp, st) in upd.items():
+    for pk, (hsp, asp, hnm, anm, st) in upd.items():
         m = games["game_pk"] == pk
         if m.any():
+            # Names must refresh with the ids: updating only the ids left a
+            # freshly announced starter rendering as TBD on the card.
             games.loc[m, ["home_sp_id", "away_sp_id", "status"]] = [hsp, asp, st]
+            games.loc[m, ["home_sp_name", "away_sp_name"]] = [hnm, anm]
     return games
 
 

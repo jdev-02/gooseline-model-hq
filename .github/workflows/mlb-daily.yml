@@ -34,11 +34,14 @@ jobs:
         run: |
           uv run python -m src.mlb.rundown --days 1 --db data/kalshi_prices.db
           uv run python -m src.site.build --db data/kalshi_prices.db
+      - name: paper-trade P&L
+        continue-on-error: true
+        run: uv run python ops/paper_trade.py --stake 15 --min-edge 0.04
       - name: commit
         run: |
           git config user.name "model-hq-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/mlb/raw/schedule/2026.json.gz data/mlb/games.csv data/mlb/narrative/log.csv docs/index.html
+          git add data/mlb/raw/schedule/2026.json.gz data/mlb/games.csv data/mlb/narrative/log.csv data/mlb/paper_trades.csv docs/index.html
           git diff --cached --quiet && exit 0
           git commit -m "data(mlb): daily rundown $(date -u +%Y-%m-%d)"
           git pull --rebase origin main
