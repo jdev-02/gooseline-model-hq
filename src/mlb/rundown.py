@@ -69,6 +69,8 @@ def price_totals(df, upcoming, cfg_t):
     when the totals config has not been frozen by ops/run_totals.py yet.
     """
     if cfg_t is None:
+        print("totals: no data/mlb/totals_config.json, run ops/run_totals.py",
+              file=sys.stderr)
         return {}
     from src.mlb.totals import build_total_features, NegBinomTotal
     from src.mlb.park import build_park_factors, park_lookup
@@ -82,8 +84,10 @@ def price_totals(df, upcoming, cfg_t):
     sw = season_decay_weights(train["season"].values,
                               int(upcoming["season"].max()), hl)
     nb = NegBinomTotal().fit(train[cols].values, train["y"].values, sample_weight=sw)
-    want = set(upcoming["game_pk"].tolist())
-    up_t = tdf[tdf["game_pk"].isin(want)]
+    want = set(int(x) for x in upcoming["game_pk"].tolist())
+    up_t = tdf[tdf["game_pk"].astype(int).isin(want)]
+    print(f"totals: {len(train)} train rows, k={nb.k_:.1f}, "
+          f"{len(up_t)}/{len(want)} upcoming matched", file=sys.stderr)
     if not len(up_t):
         return {}
     X = up_t[cols].values
