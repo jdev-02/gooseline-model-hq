@@ -284,6 +284,35 @@ def mlb_event_key(event_ticker, market_ticker):
     return (ev["date"], ev["away"], ev["home"], ev["game_number"]), team
 
 
+MLB_TOTAL_RE = re.compile(
+    r"^KXMLBTOTAL-(\d{2}[A-Z]{3}\d{2})(\d{4})([A-Z]+?)(?:G(\d))?$")
+
+
+def mlb_total_key(event_ticker, market_ticker):
+    """parse_event callback for the KXMLBTOTAL ladder.
+
+    Groups by game and keys each rung by its floor strike, so the caller sees
+    {(date, away, home, game_no): {"8.5": {...}, "7.5": {...}}}. The rung is
+    the trailing integer of the market ticker: '...-9' is the 8.5 line, i.e.
+    nine runs or more.
+    """
+    m = MLB_TOTAL_RE.match(event_ticker or "")
+    if not m:
+        return None
+    d, hhmm, pair, gnum = m.groups()
+    rung = (market_ticker or "").rsplit("-", 1)[-1]
+    try:
+        strike = float(int(rung)) - 0.5
+    except (TypeError, ValueError):
+        return None
+    teams = split_mlb_pair(pair)
+    if not teams:
+        return None
+    date = f"20{d[:2]}-{_MONTHS[d[2:5]]:02d}-{d[5:]}"
+    key = (date, teams[0], teams[1], int(gnum) if gnum else 1)
+    return key, f"{strike:g}"
+
+
 def match_mlb_event(prices, date, away, home, game_number=1):
     for a in MLB_ALIASES.get(away, [away]):
         for h in MLB_ALIASES.get(home, [home]):

@@ -16,8 +16,11 @@ import pandas as pd
 from scipy.stats import norm
 
 from src.core.kalman import TeamKalman
+import sys
+
 from src.core.kalshi import (kalshi_fee, latest_prices, latest_snapshot_ts,
-                             live_prices, mlb_event_key, match_mlb_event)
+                             live_prices, mlb_event_key, mlb_total_key,
+                             match_mlb_event)
 from src.core.models import LinearGaussianModel, prob_margin_over
 from src.core.walkforward import season_decay_weights
 from src.mlb.compile import DATA, load_games, load_team_game_stats, load_pitcher_game_stats
@@ -49,6 +52,48 @@ def verdict_for(edge, side, price_age_min=None):
     if edge > 0:
         return f"CAUTIOUS &mdash; small edge on {side}"
     return "NO VALUE at current price"
+
+
+TOTAL_LINES = (7.5, 8.5, 9.5)
+
+
+def load_totals_config():
+    p = DATA / "totals_config.json"
+    return json.loads(p.read_text()) if p.exists() else None
+
+
+def price_totals(df, upcoming, cfg_t):
+    """Fit the negative-binomial totals model and price the Kalshi ladder.
+
+    Returns {game_pk: {"mu_total": float, "lines": {strike: p_over}}} or {}
+    when the totals config has not been frozen by ops/run_totals.py yet.
+    """
+    if cfg_t is None:
+        return {}
+    from src.mlb.totals import build_total_features, NegBinomTotal
+    from src.mlb.park import build_park_factors, park_lookup
+    games = load_games(keep_unplayed=True, first_season=cfg_t.get("first_season", 2008))
+    park = build_park_factors(games)
+    tdf = build_total_features(games, load_team_game_stats(),
+                               load_pitcher_game_stats(), park_lookup(park))
+    cols = cfg_t["feature_cols"]
+    train = tdf[tdf["y"].notna()]
+    hl = cfg_t.get("half_life_seasons") or np.inf
+    sw = season_decay_weights(train["season"].values,
+                              int(upcoming["season"].max()), hl)
+    nb = NegBinomTotal().fit(train[cols].values, train["y"].values, sample_weight=sw)
+    want = set(upcoming["game_pk"].tolist())
+    up_t = tdf[tdf["game_pk"].isin(want)]
+    if not len(up_t):
+        return {}
+    X = up_t[cols].values
+    mu, _ = nb.predict_dist(X)
+    out = {}
+    for j, pk in enumerate(up_t["game_pk"].tolist()):
+        out[pk] = {"mu_total": round(float(mu[j]), 2),
+                   "lines": {ln: round(float(nb.prob_over(X[j:j + 1], ln)[0]), 3)
+                             for ln in TOTAL_LINES}}
+    return out
 
 
 def load_config():
@@ -143,6 +188,13 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
         price_source = "snapshot log"
     narr = load_narrative(narrative_path)
     now = pd.Timestamp.now(tz="UTC")
+    try:
+        totals = price_totals(df, up, load_totals_config())
+    except Exception as e:
+        print(f"totals pricing skipped ({e})", file=sys.stderr)
+        totals = {}
+    tot_prices = (live_prices("KXMLBTOTAL", mlb_total_key)
+                  if (totals and use_live_prices) else {})
 
     rows = []
     for j, r in enumerate(up.itertuples(index=False)):
@@ -178,6 +230,27 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
                 best, side = max((e_h, r.home_team), (e_a, r.away_team))
                 rec[ek] = round(float(best), 3)
                 rec[vk] = verdict_for(best, side, age)
+        t = totals.get(r.game_pk)
+        if t:
+            rec["mu_total"] = t["mu_total"]
+            tp = tot_prices.get((str(r.gameday.date()), r.away_team,
+                                 r.home_team, int(r.game_number)), {})
+            best_t, best_desc = None, ""
+            for ln, p_over in t["lines"].items():
+                rec[f"p_over_{ln:g}"] = p_over
+                q = tp.get(f"{ln:g}")
+                ask = q.get("ask") if q else None
+                if ask is None:
+                    continue
+                e_o = p_over - ask - kalshi_fee(ask)
+                e_u = (1 - p_over) - (1 - ask) - kalshi_fee(1 - ask)
+                for e, side in ((e_o, f"OVER {ln:g}"), (e_u, f"UNDER {ln:g}")):
+                    if best_t is None or e > best_t:
+                        best_t, best_desc = e, side
+            if best_t is not None:
+                rec["total_edge"] = round(float(best_t), 3)
+                rec["total_call"] = (best_desc if best_t > edge_threshold
+                                     else f"no edge (best {best_desc})")
         rows.append(rec)
     table = pd.DataFrame(rows)
     trained = df[df["y"].notna()]
