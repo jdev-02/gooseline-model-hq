@@ -23,7 +23,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.11"
-      - run: uv sync --no-dev
+      - run: uv sync --no-dev --extra torch   # NFL site fits the deep ensemble
       - name: refresh current season schedule and games.csv
         run: |
           uv run python ops/backfill_mlb.py --schedule --seasons 2026 --force

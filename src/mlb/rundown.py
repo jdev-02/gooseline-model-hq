@@ -106,6 +106,10 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
     if ens is not None:
         emu, ale, epi = ens.predict_split(X)
         mu, sigma = emu, np.sqrt(ale + epi)
+    # Unlisted probable starter: the pitcher block fell back to league mean,
+    # so widen the honest range by 10% and flag the row.
+    sp_unknown = (up["home_sp_id"].isna() | up["away_sp_id"].isna()).values
+    sigma = np.where(sp_unknown, sigma * 1.10, sigma)
     recal = float(cfg.get("recal_scale", 1.0))
     p_home = norm.cdf(mu / (recal * sigma))
     prices = latest_prices(db_path, "KXMLBGAME", mlb_event_key)
@@ -118,6 +122,7 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
         p_n = float(norm.cdf(mu_n / (recal * sg_n)))
         rec = {"date": r.gameday.date(), "game_pk": r.game_pk, "away": r.away_team, "home": r.home_team,
                "home_sp": r.home_sp_name, "away_sp": r.away_sp_name,
+               "sp_unknown": bool(sp_unknown[j]),
                "mu": round(float(mu[j]), 2), "sigma": round(float(sigma[j]), 3), "p_home": round(float(p_home[j]), 3),
                "mkt_home": None, "mkt_away": None, "edge": None, "verdict": "no price",
                "narrative_shift": round(shift, 2), "mu_narrative": round(mu_n, 2),
