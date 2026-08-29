@@ -1,0 +1,2 @@
+date,game_pk,market,pick,ask,p_model,edge,won,price_age_min,fee,cost_per_contract,stake,contracts,pnl,cum_pnl
+2026-08-29,824230,ML,DET,0.37,0.431,0.045,True,0.0,0.016317,0.386317,15.0,38.82821620586202,23.83,23.83
