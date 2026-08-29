@@ -1,4 +1,4 @@
-"""Shared plotting configuration. Adapted from NPS CS3315 src/plotting.py.
+"""Shared plotting configuration.
 
 IEEE-style defaults but with text.usetex off by default since not every
 machine has a LaTeX install. Flip USE_TEX = True if you have one.

@@ -1,11 +1,10 @@
-"""Evaluation primitives. Honors the NPS CS3315 hard requirements:
+"""Evaluation primitives. The house rules every model here is held to:
 
-- regression_report() is the standard output for any regression model
-  (verbatim from gitlab-nps/.../CLAUDE.md:85-137, lightly adapted to
-  return the figure for save_figure() instead of plt.show()).
+- regression_report() is the standard output for any regression fit, and
+  returns its figure for save_figure() rather than calling plt.show().
 - assert_no_leakage() trips a loud failure on RMSE=0 or R^2~=1.0.
-- For probabilistic outputs we add Brier score + reliability diagram,
-  which the NPS coursework does not cover but which a betting system requires.
+- Brier score + reliability diagram, because a model that outputs
+  probabilities has to be calibrated before any of them are trusted.
 """
 
 from __future__ import annotations
@@ -82,7 +81,7 @@ def assert_no_leakage(
     rmse_floor: float = 1e-6,
     r2_ceiling: float = 0.999,
 ) -> None:
-    """Raise loudly if metrics look impossibly good. Per NPS CLAUDE.md:134."""
+    """Raise loudly if metrics look impossibly good."""
     y_true = np.asarray(y_true).ravel()
     y_pred = np.asarray(y_pred).ravel()
     rmse = float(np.sqrt(mean_squared_error(y_true, y_pred)))
@@ -101,8 +100,8 @@ def assert_no_leakage(
 def classification_report_test_only(y_test, y_pred_test, class_names=None) -> str:
     """Print confusion matrix + report for the *test set* only.
 
-    Per NPS CLAUDE.md:140 confusion matrices on training data are forbidden.
-    Function name encodes the rule.
+    Confusion matrices on training data are forbidden; the function name
+    encodes the rule.
     """
     cm = confusion_matrix(y_test, y_pred_test)
     fig, ax = plt.subplots(figsize=(5, 5))
@@ -116,7 +115,7 @@ def classification_report_test_only(y_test, y_pred_test, class_names=None) -> st
     return report
 
 
-# ---------- Probabilistic-output metrics (extension; not in NPS coursework) ----------
+# ---------------------- Probabilistic-output metrics ----------------------
 
 
 def brier_score(y_true_binary: np.ndarray, p_pred: np.ndarray) -> float:

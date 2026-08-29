@@ -1,9 +1,9 @@
 """Walk-forward cross-validation with embargo.
 
-The NPS coursework treats data as IID and uses train_test_split. For
-time-series this leaks future information into training and overstates
-performance. Walk-forward fits the model the same way it will actually be
-used in production: train on everything up to time T, predict T+gap.
+A standard train_test_split treats data as IID. For time series that leaks
+future information into training and overstates performance. Walk-forward
+fits the model the same way it will actually be used in production: train
+on everything up to time T, predict T+gap.
 
 Embargo: a gap (in hours) between the end of the training window and the
 start of the test window. Prevents intraday autocorrelation around the
