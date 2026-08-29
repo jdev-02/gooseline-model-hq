@@ -1,0 +1,18 @@
+{
+  "lam": 1000.0,
+  "half_life_seasons": Infinity,
+  "recal_scale": 1.5,
+  "feature_cols": [
+    "off_sum",
+    "def_sum",
+    "pressure_sum",
+    "sp_fip_sum",
+    "sp_k9_sum",
+    "bp_fip_sum",
+    "bp_workload_sum",
+    "log_park_factor",
+    "day_night",
+    "roof_or_dh"
+  ],
+  "first_season": 2008
+}
