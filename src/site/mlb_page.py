@@ -134,6 +134,26 @@ def game_card(r):
                   f'<b>{p*100:.0f}%</b> of the time &middot; fair price {american(p)} '
                   f'&middot; {tag}</div>')
 
+    # Total runs, priced by the negative-binomial model
+    tot_row = ""
+    mt = r.get("mu_total")
+    if mt is not None and not pd.isna(mt):
+        parts = []
+        for ln in (7.5, 8.5, 9.5):
+            po = r.get(f"p_over_{ln:g}")
+            if po is not None and not pd.isna(po):
+                parts.append(f"O{ln:g} <b>{float(po)*100:.0f}%</b>")
+        call = str(r.get("total_call") or "")
+        te = r.get("total_edge")
+        if call and not call.startswith("no edge") and te is not None and not pd.isna(te):
+            tag = f' &middot; <span class="hit">{call} ({float(te)*100:+.1f}% after fees)</span>'
+        elif call:
+            tag = f' &middot; {call.replace("no edge (best ", "closest: ").rstrip(")")}, no edge'
+        else:
+            tag = ""
+        tot_row = (f'<div class="gap">Total runs: model expects <b>{float(mt):.1f}</b> '
+                   f'&middot; {" &middot; ".join(parts)}{tag}</div>')
+
     note = ""
     v = str(r["verdict"])
     if has_price:

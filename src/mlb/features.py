@@ -16,7 +16,14 @@ import pandas as pd
 MOMENTUM_COLS = ["rd_ewma_diff", "rd_slope_diff", "pressure_diff",
                  "lob_rate_diff", "late_inning_diff"]
 PITCHER_COLS = ["sp_fip_diff", "sp_command_diff", "sp_command_consistency_diff",
-                "sp_rest_diff", "bp_fip_diff", "bp_workload_diff"]
+                "sp_rest_diff", "sp_short_il_diff", "bp_fip_diff",
+                "bp_workload_diff"]
+
+# A starter back from a 21-40 day absence underperforms the model by about
+# 0.68 runs (n=229, t=-2.41; ops/test_factor.py --factor starter_returning
+# --sweep). Long enough to be a real injury, short enough that he is back
+# before he is right. sp_rest_diff clips at 7 days and cannot see this.
+SHORT_IL_BAND = (21, 40)
 CONTEXT_COLS = ["log_park_factor", "day_night", "rest_diff", "div_game"]
 KALMAN_COLS = ["kalman_diff", "kalman_var"]
 TIER_A_COLS = KALMAN_COLS + MOMENTUM_COLS + CONTEXT_COLS
@@ -115,15 +122,20 @@ def build_features(df, team_lookup=None, pitcher_stats=None, park_fn=None,
             cv = sp_cmd_var.get(pid)
             cvar = 0.03 if cv is None else cv.v
             last = sp_last.get(pid)
-            rest = 5.0 if last is None else float(np.clip((r.gameday - last).days, *sp_rest_clip))
-            return fip, cmd, cvar, rest
+            gap = None if last is None else (r.gameday - last).days
+            rest = 5.0 if gap is None else float(np.clip(gap, *sp_rest_clip))
+            short_il = float(gap is not None
+                             and SHORT_IL_BAND[0] <= gap <= SHORT_IL_BAND[1])
+            return fip, cmd, cvar, rest, short_il
 
-        hf, hc, hv, hr_ = sp_feats(r.home_sp_id)
-        af, ac, av, ar_ = sp_feats(r.away_sp_id)
+        hf, hc, hv, hr_, hil = sp_feats(r.home_sp_id)
+        af, ac, av, ar_, ail = sp_feats(r.away_sp_id)
         cols["sp_fip_diff"][i] = af - hf
         cols["sp_command_diff"][i] = hc - ac
         cols["sp_command_consistency_diff"][i] = av - hv
         cols["sp_rest_diff"][i] = hr_ - ar_
+        # positive favors home: the away starter is the compromised one
+        cols["sp_short_il_diff"][i] = ail - hil
         bh, ba = bp_fip.get(h), bp_fip.get(a)
         cols["bp_fip_diff"][i] = (lg_fip if ba is None else ba.v + lg_c) - (lg_fip if bh is None else bh.v + lg_c)
 
