@@ -48,6 +48,28 @@ def fit_models(df, asof_season):
     return lin, ens
 
 
+STALE_MINUTES = 15
+
+
+def nfl_event_key(event_ticker, market_ticker):
+    """parse_event callback for core.kalshi.live_prices."""
+    m = TICKER_RE.match(event_ticker or "")
+    if not m:
+        return None
+    return m.group(2), market_ticker.rsplit("-", 1)[-1]
+
+
+def live_prices_nfl():
+    """Fetch NFL prices from Kalshi at read time.
+
+    Same reason as the MLB side: a verdict computed against a logged quote the
+    market has already moved past is indistinguishable from a live one, and
+    football lines move on inactive reports late in the week.
+    """
+    from src.core.kalshi import live_prices
+    return live_prices("KXNFLGAME", nfl_event_key)
+
+
 def latest_prices(db_path):
     if not db_path or not os.path.exists(db_path):
         return {}
@@ -187,8 +209,9 @@ def render_html(table, trained_through, out_path="rundown.html"):
 
 
 def rundown(games_path="data/nfl/games.csv", stats_path="data/nfl/team_game_stats.csv",
-            db_path="kalshi_prices.db", horizon_days=8, edge_threshold=0.04,
-            html_out=None):
+            db_path="data/kalshi_prices.db", horizon_days=8, edge_threshold=0.04,
+            html_out=None, use_live_prices=True,
+            log_path="data/nfl/rundown_log.csv"):
     df = build_frame(games_path, stats_path)
     today = pd.Timestamp.today().normalize()
     upcoming = df[df["result"].isna()
@@ -207,7 +230,13 @@ def rundown(games_path="data/nfl/games.csv", stats_path="data/nfl/team_game_stat
     sigma = RECAL_SCALE * np.sqrt(ale + epi)
     p_home = norm_cdf(mu / sigma)
 
-    prices = latest_prices(db_path)
+    prices, price_source = {}, "snapshot log"
+    if use_live_prices:
+        prices = live_prices_nfl()
+        price_source = "live" if prices else "snapshot log"
+    if not prices:
+        prices = latest_prices(db_path)
+    now = pd.Timestamp.now(tz="UTC")
     out = []
     for j, row in enumerate(upcoming.itertuples(index=False)):
         rec = {"date": row.gameday.date(), "away": row.away_team,
@@ -215,7 +244,8 @@ def rundown(games_path="data/nfl/games.csv", stats_path="data/nfl/team_game_stat
                "mu": round(mu[j], 1), "sigma": round(sigma[j], 1),
                "epi_sig": round(np.sqrt(epi[j]), 2),
                "p_home": round(p_home[j], 3),
-               "mkt_home": None, "edge": None, "verdict": "no price"}
+               "mkt_home": None, "edge": None, "verdict": "no price",
+               "price_age_min": None}
         ev = match_event(prices, row.away_team, row.home_team)
         if ev:
             side = None
@@ -230,7 +260,24 @@ def rundown(games_path="data/nfl/games.csv", stats_path="data/nfl/team_game_stat
                 e_away = (1 - p_home[j]) - ap["ask"] - kalshi_fee(ap["ask"])
                 if e_away > edge_threshold and (side is None or e_away > side[1]):
                     side = (row.away_team, e_away)
-            if side:
+            asof = (hp or {}).get("asof") or (ap or {}).get("asof")
+            age = ((now - pd.Timestamp(asof)).total_seconds() / 60.0
+                   if asof is not None else None)
+            if age is None and price_source != "live":
+                from src.core.kalshi import latest_snapshot_ts
+                ts = latest_snapshot_ts(db_path)
+                age = ((now - pd.Timestamp(ts).tz_localize("UTC")).total_seconds() / 60.0
+                       if ts else None)
+            rec["price_age_min"] = None if age is None else round(age, 1)
+            stale = age is not None and age > STALE_MINUTES
+            if stale:
+                # A stale quote wearing a CANDIDATE badge is the single most
+                # dangerous output this produces: it looks exactly like a live
+                # one. Downgrade rather than annotate.
+                best = side[1] if side else None
+                rec["edge"] = round(best, 3) if best is not None else None
+                rec["verdict"] = f"STALE PRICE — re-check ({age:.0f} min old)"
+            elif side:
                 rec["edge"] = round(side[1], 3)
                 rec["verdict"] = f"CANDIDATE {side[0]}"
             else:
@@ -240,7 +287,19 @@ def rundown(games_path="data/nfl/games.csv", stats_path="data/nfl/team_game_stat
         out.append(rec)
 
     table = pd.DataFrame(out).sort_values(["date", "home"])
-    print(f"\n=== Rundown: next {horizon_days} days, trained through "
+    if log_path:
+        # Same discipline as the MLB side: every verdict is recorded with the
+        # price it was computed against, so paper trading can settle it later.
+        from pathlib import Path as _P
+        _P(log_path).parent.mkdir(parents=True, exist_ok=True)
+        new = table.assign(
+            run_ts=pd.Timestamp.utcnow().isoformat(timespec="seconds"),
+            game_id=[f"{r.date}_{r.away}_{r.home}" for r in table.itertuples(index=False)],
+            result=np.nan)
+        if _P(log_path).exists():
+            new = pd.concat([pd.read_csv(log_path), new], ignore_index=True)
+        new.to_csv(log_path, index=False)
+    print(f"\n=== Rundown: next {horizon_days} days, prices: {price_source}, trained through "
           f"{int(df[df['result'].notna()]['season'].max())} week "
           f"{int(df[df['result'].notna()].iloc[-1]['week'])} ===")
     print(table.to_string(index=False))
@@ -259,11 +318,16 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--games", default="data/nfl/games.csv")
     ap.add_argument("--stats", default="data/nfl/team_game_stats.csv")
-    ap.add_argument("--db", default="kalshi_prices.db")
+    ap.add_argument("--db", default="data/kalshi_prices.db")
     ap.add_argument("--days", type=int, default=8)
     ap.add_argument("--edge", type=float, default=0.04)
     ap.add_argument("--html", nargs="?", const="rundown.html", default=None,
                     help="also write an HTML report (default rundown.html; "
                          "use docs/index.html for GitHub Pages)")
+    ap.add_argument("--snapshot-prices", action="store_true",
+                    help="read the sqlite log instead of fetching live prices")
+    ap.add_argument("--no-log", action="store_true")
     args = ap.parse_args()
-    rundown(args.games, args.stats, args.db, args.days, args.edge, args.html)
+    rundown(args.games, args.stats, args.db, args.days, args.edge, args.html,
+            use_live_prices=not args.snapshot_prices,
+            log_path=None if args.no_log else "data/nfl/rundown_log.csv")

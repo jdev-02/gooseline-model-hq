@@ -1,0 +1,43 @@
+name: nfl-daily
+
+# NFL parity with the MLB pipeline: live prices at read time, verdicts logged
+# with the price they were computed against, paper-trade P&L, site rebuilt.
+# Runs through the season; harmless in the offseason (no games in the horizon).
+on:
+  schedule:
+    - cron: "0 16 * * *"        # 12:00 ET
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: model-hq-data
+  cancel-in-progress: false
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+      - run: uv sync --no-dev --extra torch
+      - name: rundown
+        run: uv run python -m src.nfl.rundown --days 8
+      - name: settle and score
+        continue-on-error: true
+        run: uv run python ops/paper_trade.py --sport nfl --stake 15 --min-edge 0.04
+      - name: rebuild the site
+        run: uv run python -m src.site.build
+      - name: commit
+        run: |
+          git config user.name "model-hq-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/nfl/rundown_log.csv docs/index.html || true
+          git diff --cached --quiet && exit 0
+          git commit -m "data(nfl): daily rundown $(date -u +%Y-%m-%d)"
+          git pull --rebase origin main
+          git push origin HEAD:main

@@ -27,16 +27,35 @@ ap.add_argument("--kelly", type=float, default=0.0,
                 help="if >0, fraction of Kelly instead of a flat stake")
 ap.add_argument("--bankroll", type=float, default=1000.0)
 ap.add_argument("--stream", default="model", choices=["model", "narrative"])
+ap.add_argument("--sport", default="mlb", choices=["mlb", "nfl"])
 args = ap.parse_args()
 
-log_path = DATA / "narrative" / "log.csv"
+if args.sport == "nfl":
+    log_path = Path("data/nfl/rundown_log.csv")
+    games_path = Path("data/nfl/games.csv")
+else:
+    log_path = DATA / "narrative" / "log.csv"
+    games_path = DATA / "games.csv"
+
 if not log_path.exists():
-    print("no rundown log yet")
+    print(f"no {args.sport} rundown log yet")
     sys.exit(0)
 log = pd.read_csv(log_path)
-games = pd.read_csv(DATA / "games.csv",
-                    usecols=["game_pk", "played", "result", "home_score", "away_score"])
-g = games.set_index("game_pk")
+
+if args.sport == "nfl":
+    gf = pd.read_csv(games_path, low_memory=False)
+    gf = gf[gf["result"].notna()].copy()
+    gf["key"] = (gf["gameday"].astype(str) + "_" + gf["away_team"]
+                 + "_" + gf["home_team"])
+    gf["played"] = True
+    gf["home_score"] = gf["home_score"]
+    gf["away_score"] = gf["away_score"]
+    g = gf.set_index("key")
+    log["game_pk"] = log.get("game_id", log.get("date"))
+else:
+    games = pd.read_csv(games_path,
+                        usecols=["game_pk", "played", "result", "home_score", "away_score"])
+    g = games.set_index("game_pk")
 
 edge_col = "edge" if args.stream == "model" else "edge_narrative"
 verd_col = "verdict" if args.stream == "model" else "verdict_narrative"
@@ -47,7 +66,7 @@ log = log.sort_values("run_ts").drop_duplicates(["game_pk", "date"], keep="last"
 
 rows = []
 for r in log.itertuples(index=False):
-    pk = int(r.game_pk)
+    pk = r.game_pk if args.sport == "nfl" else int(r.game_pk)
     if pk not in g.index or not bool(g.loc[pk, "played"]):
         continue
     result = float(g.loc[pk, "result"])
@@ -57,9 +76,22 @@ for r in log.itertuples(index=False):
     edge = getattr(r, edge_col, np.nan)
     verdict = str(getattr(r, verd_col, ""))
     if pd.notna(edge) and edge >= args.min_edge and "STALE" not in verdict:
-        side = verdict.split("&mdash;")[-1].strip().replace("small edge on ", "")
+        side = (verdict.split("&mdash;")[-1].strip()
+                .replace("small edge on ", "")
+                .replace("CANDIDATE ", "").strip())
         if side in (r.home, r.away):
-            ask = float(r.mkt_home if side == r.home else r.mkt_away)
+            mh = r.mkt_home
+            ma = getattr(r, "mkt_away", None)
+            if side == r.home:
+                ask = float(mh) if pd.notna(mh) else np.nan
+            elif ma is not None and pd.notna(ma):
+                ask = float(ma)
+            elif pd.notna(mh):
+                ask = 1.0 - float(mh)   # NFL logs only the home ask
+            else:
+                ask = np.nan
+            if not np.isfinite(ask):
+                continue
             p_model = float(r.p_home if side == r.home else 1 - r.p_home)
             won = (result > 0) if side == r.home else (result < 0)
             rows.append(dict(date=r.date, game_pk=pk, market="ML", pick=side,

@@ -297,6 +297,8 @@ def ats_label(x):
 
 
 def verdict_badge(v):
+    if v.startswith("STALE"):
+        return f'<span class="verdict v-caut">{v}</span>'
     if v.startswith("HIGH VALUE"):
         return f'<span class="verdict v-high">{v}</span>'
     if v.startswith("CAUTIOUS"):
@@ -397,7 +399,7 @@ def game_card(r):
             f'<div class="bars">{model_bar}{mkt_bar}</div>{gaptxt}{spread_row}{note}'
             f'{verdict_badge(v)}</div>')
 def build_site(out_path="site.html", games_path="data/nfl/games.csv",
-               stats_path="data/nfl/team_game_stats.csv", db_path="kalshi_prices.db",
+               stats_path="data/nfl/team_game_stats.csv", db_path="data/kalshi_prices.db",
                horizon_days=8, edge_threshold=0.04):
     df = rd.build_frame(games_path, stats_path)
     hist, by_season, calib = history_tables(df)
@@ -422,8 +424,14 @@ def build_site(out_path="site.html", games_path="data/nfl/games.csv",
         mu, ale, epi = ens.predict_split(Xu)
         sigma = rd.RECAL_SCALE * np.sqrt(ale + epi)
         p_home = norm.cdf(mu / sigma)
-        prices = rd.latest_prices(db_path)
-        price_age = ""
+        # Live prices at render time; the sqlite log is the fallback and the
+        # historical record, not the source of a verdict.
+        prices = rd.live_prices_nfl() or rd.latest_prices(db_path)
+        live = bool(prices) and any(
+            q.get("asof") is not None
+            for ev in prices.values() for q in ev.values())
+        price_age = ('<p class="sub">Market prices fetched live at build time.</p>'
+                     if live else "")
         try:
             import sqlite3 as _sq
             _con = _sq.connect(db_path)
