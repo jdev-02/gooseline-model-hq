@@ -27,11 +27,17 @@ factors:
       recent film. The model sees only his stale FIP EWMA.
     direction: favors the returning pitcher's club
     typical_delta_runs: 0.3
-    test: >-
-      Find starts preceded by a gap of 15+ days with prior-season innings.
-      Compare actual runs allowed against the model's pre-game expectation.
-    status: untested
-    seen: [2026-08-29 BOS@NYY G2 (Fried, won)]
+    test: ops/test_factor.py --factor starter_returning
+    status: rejected
+    evidence: >-
+      1,255 starts across 2023-2025 preceded by a 15+ day gap. Mean residual
+      in the claimed direction is -0.209 runs (se 0.124, t = -1.69): the
+      effect is not significant, and what sign there is points the WRONG way.
+      Returning starters do slightly worse than the model expects, not
+      better, which is the more intuitive story once stated: rust, a pitch
+      count, and a bullpen asked to cover the innings he does not throw.
+    seen: [2026-08-29 BOS@NYY G2 (Fried, won — one game, and the sample says
+      it was luck rather than a repeatable read)]
 
   - id: pitcher_matchup_history
     label: Starter has a specific history against this opponent
