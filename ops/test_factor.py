@@ -65,8 +65,8 @@ def report(h, mask, label, side_col):
     return {"n": n, "mean": float(mean), "t": float(t)}
 
 
-def factor_starter_returning(h, gap_days=15):
-    """Starts preceded by a long gap for that pitcher."""
+def factor_starter_returning(h, gap_days=15, gap_max=400):
+    """Starts preceded by a gap of [gap_days, gap_max] for that pitcher."""
     g = pd.read_csv(DATA / "games.csv", low_memory=False)
     g["gameday"] = pd.to_datetime(g["gameday"])
     apps = []
@@ -77,7 +77,7 @@ def factor_starter_returning(h, gap_days=15):
         apps.append(d)
     a = pd.concat(apps).sort_values(["pid", "gameday"])
     a["gap"] = a.groupby("pid")["gameday"].diff().dt.days
-    ret = a[a["gap"] >= gap_days]
+    ret = a[(a["gap"] >= gap_days) & (a["gap"] <= gap_max)]
     h = h.copy()
     h["game_id"] = h["game_id"].astype(str)
     ret["game_id"] = ret["game_id"].astype(str)
@@ -110,13 +110,24 @@ FACTORS = {
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--factor", required=True, choices=sorted(FACTORS))
+ap.add_argument("--sweep", action="store_true",
+                help="for starter_returning, sweep the gap threshold")
 args = ap.parse_args()
 
-h = load_hist()
-print(f"walk-forward history: {len(h)} games, "
-      f"{h['season'].min()}-{h['season'].max()}")
-h, mask, side_col = FACTORS[args.factor](h)
-report(h, mask, args.factor, side_col)
+h0 = load_hist()
+print(f"walk-forward history: {len(h0)} games, "
+      f"{h0['season'].min()}-{h0['season'].max()}")
+
+if args.sweep and args.factor == "starter_returning":
+    # A layoff is not one thing. A skipped turn is not a rehab stint, and
+    # lumping them together can hide an effect that lives in only one band.
+    for lo, hi in ((6, 9), (10, 14), (15, 20), (21, 40), (41, 400)):
+        h = h0.copy()
+        h, mask, side = factor_starter_returning(h, gap_days=lo, gap_max=hi)
+        report(h, mask, f"starter_returning gap {lo}-{hi}d", side)
+else:
+    h, mask, side_col = FACTORS[args.factor](h0)
+    report(h, mask, args.factor, side_col)
 print("\nA factor only earns `supported` when it predicts the part of the "
       "outcome the model gets wrong. Update data/mlb/factors.yaml by hand "
       "with the verdict and the evidence.")
