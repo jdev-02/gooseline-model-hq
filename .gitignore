@@ -30,3 +30,7 @@ data/mlb/raw/boxscore/
 Thumbs.db
 .vscode/
 .idea/
+
+# Personal wagering records stay out of the public repo entirely.
+# They live in ../model-hq-private/ alongside the reads that reference them.
+data/mlb/bets/

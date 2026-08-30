@@ -29,6 +29,17 @@ MAX_DELTA = 1.0
 SIGMA_FLOOR = 0.15
 
 
+FACTORS_PATH = Path("data/mlb/factors.yaml")
+
+
+def load_factors(path=FACTORS_PATH):
+    """-> {factor_id: dict}. The registry of read types and their status."""
+    if not Path(path).exists():
+        return {}
+    doc = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+    return {f["id"]: f for f in doc.get("factors", [])}
+
+
 @dataclass
 class NarrativeEntry:
     game: str
@@ -37,6 +48,8 @@ class NarrativeEntry:
     confidence: float
     note: str = ""
     author: str = ""
+    factor: str = ""
+    factor_status: str = "unregistered"
 
     @property
     def away(self):
@@ -47,17 +60,31 @@ class NarrativeEntry:
         return self.game.split("@")[1].strip().upper()
 
 
-def load_narrative(path):
-    """-> {(away, home): NarrativeEntry}. Missing/None path -> {}."""
+def load_narrative(path, factors_path=FACTORS_PATH):
+    """-> {(away, home): NarrativeEntry}. Missing/None path -> {}.
+
+    An entry naming a factor whose registry status is `rejected` is loaded
+    with its shift zeroed: the read has already been measured against history
+    and did not hold, so it must not move a number again under a new note.
+    """
     if not path or not Path(path).exists():
         return {}
     doc = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+    reg = load_factors(factors_path)
     out = {}
     for e in doc.get("entries", []):
+        fid = str(e.get("factor", "") or "")
+        status = reg.get(fid, {}).get("status", "unregistered" if fid else "")
+        delta = float(e.get("delta_runs", 0.0))
+        if status == "rejected":
+            print(f"narrative: factor '{fid}' is rejected in the registry; "
+                  f"zeroing its shift for {e.get('game')}")
+            delta = 0.0
         ent = NarrativeEntry(game=e["game"], team=str(e["team"]).upper(),
-                             delta_runs=float(e.get("delta_runs", 0.0)),
+                             delta_runs=delta,
                              confidence=float(e.get("confidence", 0.5)),
-                             note=e.get("note", ""), author=doc.get("author", ""))
+                             note=e.get("note", ""), author=doc.get("author", ""),
+                             factor=fid, factor_status=status)
         out[(ent.away, ent.home)] = ent
     return out
 

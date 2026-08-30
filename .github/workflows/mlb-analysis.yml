@@ -8,7 +8,7 @@ on:
         description: "ops script to run"
         default: "paper_trade"
         type: choice
-        options: [paper_trade, study_doubleheader]
+        options: [paper_trade, study_doubleheader, test_factor]
       extra:
         description: "extra args"
         default: ""

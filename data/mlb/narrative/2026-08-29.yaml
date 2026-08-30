@@ -3,10 +3,12 @@ author: jon
 entries:
   - game: BOS@NYY
     team: NYY
+    factor: starter_returning
     delta_runs: 0.40
     confidence: 0.6
     note: >-
       Game 2 of the doubleheader. Max Fried starting for the Yankees, first
       outing back from a UCL strain: rested, and expected to come out sharp.
-      Boston's starter is still unannounced with three arms already used in
-      the opener. Counter-read to the model, which has the Yankees at 49%.
+      Boston's starter was unannounced with three arms already used in the
+      opener. Result: Yankees 9-2, Fried 5 strikeouts. The read was right and
+      the model, which had the Yankees at 49%, was wrong.

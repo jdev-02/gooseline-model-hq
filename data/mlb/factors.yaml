@@ -1,0 +1,119 @@
+# Narrative factor registry
+#
+# A "read" is a claim the model cannot see: a pitcher back from injury, a club
+# chasing a playoff spot, a lineup resting. Written as prose, a read is a
+# one-off and unfalsifiable. Written as a factor, it is a hypothesis with a
+# direction, a magnitude, and a test.
+#
+# Every narrative entry names a factor. Each factor carries its status:
+#
+#   untested   - stated, never measured. Contributes a read, not a prior.
+#   supported  - measured against history and it holds. Safe to size on.
+#   rejected   - measured and it does not hold. Keep the id so the same read
+#                cannot quietly reappear under a new name.
+#
+# A rejected factor is more valuable than an untested one: it stops a bet.
+# Once a factor reaches `supported` with a stable effect it should graduate
+# out of here and become a model feature, at which point the narrative layer
+# stops carrying it.
+
+factors:
+
+  - id: starter_returning
+    label: Starter returning from the injured list
+    hypothesis: >-
+      A starter in his first outing back is sharper than his season line
+      suggests: extra rest, a strict pitch count, and a hitter pool with no
+      recent film. The model sees only his stale FIP EWMA.
+    direction: favors the returning pitcher's club
+    typical_delta_runs: 0.3
+    test: >-
+      Find starts preceded by a gap of 15+ days with prior-season innings.
+      Compare actual runs allowed against the model's pre-game expectation.
+    status: untested
+    seen: [2026-08-29 BOS@NYY G2 (Fried, won)]
+
+  - id: pitcher_matchup_history
+    label: Starter has a specific history against this opponent
+    hypothesis: >-
+      Beyond platoon splits, some starters own particular lineups. The model
+      carries no pitcher-by-opponent term at all.
+    direction: favors the pitcher's club
+    typical_delta_runs: 0.25
+    test: >-
+      For each start, compute the pitcher's prior runs-allowed rate against
+      that club versus everyone else, then check whether the gap predicts the
+      next meeting. Expect heavy shrinkage; samples are tiny.
+    status: untested
+    seen: [2026-08-28 BOS@NYY (Schlittler, won)]
+
+  - id: playoff_push
+    label: Club chasing a playoff spot in September
+    hypothesis: >-
+      A contender in the final month plays its leverage arms harder and rests
+      regulars less than its season-long profile implies.
+    direction: favors the contending club
+    typical_delta_runs: 0.2
+    test: >-
+      Restrict to September. Bucket by games back from a playoff spot and
+      compare actual margins with model expectation.
+    status: untested
+    seen: [2026-08-27 HOU@NYY (lost)]
+
+  - id: doubleheader_bounceback
+    label: Club shut out or blown out in game 1 rebounds in game 2
+    hypothesis: >-
+      A club embarrassed in the opener responds in the nightcap.
+    direction: favors the club that lost game 1
+    typical_delta_runs: 0.0
+    test: ops/study_doubleheader.py
+    status: rejected
+    evidence: >-
+      622 doubleheader pairs, 2008-2026. Both shutout buckets sit about 5
+      points BELOW baseline in game 2, and a real causal effect cannot point
+      the same way from opposite causes. Game 1 and game 2 totals correlate
+      at r = +0.087, which is nil and the wrong sign for a bounce-back.
+    seen: [2026-08-29 BOS@NYY (considered, not bet)]
+
+  - id: scoring_regression
+    label: Last game was low or high scoring, so expect the reverse
+    hypothesis: >-
+      Run totals revert game to game.
+    direction: none
+    typical_delta_runs: 0.0
+    test: ops/study_doubleheader.py plus the game-to-game total correlation
+    status: rejected
+    evidence: >-
+      Consecutive-game totals are effectively independent (r = +0.087 within
+      doubleheaders, where the clubs and park are held constant, which is the
+      most favorable possible test). Teams are not due.
+    seen: [2026-08-29 BOS@NYY G1 over 7.5 (lost)]
+
+  - id: bullpen_burned
+    label: Opponent's bullpen was heavily used in the last 48 hours
+    hypothesis: >-
+      A club that emptied its pen yesterday fields worse relief today.
+    direction: favors the rested club
+    typical_delta_runs: 0.2
+    test: >-
+      The model already carries bp_workload_diff (relief innings over three
+      days). Test whether a human read adds anything beyond that feature.
+    status: untested
+    note: partially covered by an existing model feature; overlap must be
+      measured before this is ever sized on.
+
+  - id: spot_starter
+    label: Opponent is starting a call-up, opener, or bullpen game
+    hypothesis: >-
+      When no probable is listed, the model substitutes a league-average
+      starter, which flatters a club that is actually piecing the game
+      together. The real arm is usually worse than average.
+    direction: against the club with the unlisted or spot starter
+    typical_delta_runs: 0.35
+    test: >-
+      Find games where the probable was absent 12 hours out. Compare the
+      model's league-mean fallback against what the actual starter did.
+    status: untested
+    note: >-
+      This one is a model deficiency, not a genuine edge. If it tests as
+      supported the fix belongs in features.py, not in a human read.
