@@ -85,7 +85,7 @@ def factor_starter_returning(h, gap_days=15):
     away_ret = set(ret[ret.side == "away"]["game_id"])
     h["side"] = np.where(h["game_id"].isin(home_ret), 1.0,
                          np.where(h["game_id"].isin(away_ret), -1.0, 0.0))
-    return h["side"] != 0, "side"
+    return h, h["side"] != 0, "side"
 
 
 def factor_spot_starter(h):
@@ -100,7 +100,7 @@ def factor_spot_starter(h):
     # claim: the club WITHOUT the missing starter is favored
     h["side"] = np.where(h["home_missing"] & ~h["away_missing"], -1.0,
                          np.where(h["away_missing"] & ~h["home_missing"], 1.0, 0.0))
-    return h["side"] != 0, "side"
+    return h, h["side"] != 0, "side"
 
 
 FACTORS = {
@@ -115,8 +115,7 @@ args = ap.parse_args()
 h = load_hist()
 print(f"walk-forward history: {len(h)} games, "
       f"{h['season'].min()}-{h['season'].max()}")
-mask, side_col = FACTORS[args.factor](h)
-h = h.loc[h.index]
+h, mask, side_col = FACTORS[args.factor](h)
 report(h, mask, args.factor, side_col)
 print("\nA factor only earns `supported` when it predicts the part of the "
       "outcome the model gets wrong. Update data/mlb/factors.yaml by hand "
