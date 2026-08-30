@@ -103,9 +103,51 @@ def factor_spot_starter(h):
     return h, h["side"] != 0, "side"
 
 
+def factor_playoff_push(h, month_from=9, max_gb=6.0):
+    """Late-season games where BOTH clubs are in contention.
+
+    The claim is that a game with seeding or a head-to-head tiebreaker on the
+    line is played harder than the season-long profile implies. If that is
+    true of both clubs at once it should show up as extra variance or as a
+    home-field effect, not as a directional edge — so this tests whether the
+    model's margin is systematically off in these spots at all.
+    """
+    g = pd.read_csv(DATA / "games.csv", low_memory=False)
+    g["gameday"] = pd.to_datetime(g["gameday"])
+    g = g[g["played"]].sort_values("gameday")
+
+    # Running wins/losses per club, strictly before each game.
+    rec = {}
+    rows = []
+    for r in g.itertuples(index=False):
+        hw, hl = rec.get((r.season, r.home_team), (0, 0))
+        aw, al = rec.get((r.season, r.away_team), (0, 0))
+        rows.append((str(r.game_id), hw, hl, aw, al))
+        if r.result > 0:
+            rec[(r.season, r.home_team)] = (hw + 1, hl)
+            rec[(r.season, r.away_team)] = (aw, al + 1)
+        else:
+            rec[(r.season, r.home_team)] = (hw, hl + 1)
+            rec[(r.season, r.away_team)] = (aw + 1, al)
+    pre = pd.DataFrame(rows, columns=["game_id", "hw", "hl", "aw", "al"])
+
+    h = h.copy()
+    h["game_id"] = h["game_id"].astype(str)
+    h = h.merge(pre, on="game_id", how="left")
+    h["gameday"] = pd.to_datetime(h["gameday"])
+    h["hpct"] = h["hw"] / (h["hw"] + h["hl"]).clip(lower=1)
+    h["apct"] = h["aw"] / (h["aw"] + h["al"]).clip(lower=1)
+    # Contention proxy: both clubs above .500 late in the year.
+    late = h["gameday"].dt.month >= month_from
+    both_live = (h["hpct"] >= 0.500) & (h["apct"] >= 0.500)
+    h["side"] = 1.0  # test for a directional bias toward the home club
+    return h, late & both_live, "side"
+
+
 FACTORS = {
     "starter_returning": factor_starter_returning,
     "spot_starter": factor_spot_starter,
+    "playoff_push": factor_playoff_push,
 }
 
 ap = argparse.ArgumentParser()
