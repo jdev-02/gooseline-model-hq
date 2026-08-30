@@ -90,11 +90,17 @@ factors:
       regulars less than its season-long profile implies.
     direction: favors the contending club
     typical_delta_runs: 0.2
-    test: >-
-      Restrict to September. Bucket by games back from a playoff spot and
-      compare actual margins with model expectation.
-    status: untested
-    seen: [2026-08-27 HOU@NYY (lost)]
+    test: ops/test_factor.py --factor playoff_push
+    status: rejected
+    evidence: >-
+      370 September games, 2023-2025, where both clubs were above .500 going
+      in. Mean residual +0.163 runs toward the AWAY club (se 0.228, t =
+      -0.72 on the home side): no measurable bias in either direction. Clubs
+      in a seeding race do not beat the model's expectation, which is the
+      sensible result - both clubs are trying, and the market already knows
+      the standings.
+    seen: [2026-08-27 HOU@NYY (lost), 2026-08-30 BOS@NYY (head-to-head
+      tiebreaker read, not bet on this factor)]
 
   - id: doubleheader_bounceback
     label: Club shut out or blown out in game 1 rebounds in game 2
