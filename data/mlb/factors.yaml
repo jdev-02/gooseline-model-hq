@@ -131,6 +131,29 @@ factors:
       most favorable possible test). Teams are not due.
     seen: [2026-08-29 BOS@NYY G1 over 7.5 (lost)]
 
+  - id: day_night_split
+    label: Starter has a strong day/night split
+    hypothesis: >-
+      Some starters are genuinely better in daylight or under lights, and the
+      model carries no day/night term for the pitcher at all - only a single
+      game-level day_night flag.
+    direction: favors the club whose starter is in his better condition
+    typical_delta_runs: 0.0
+    test: ops/test_factor.py --factor day_night_split
+    status: rejected
+    evidence: >-
+      728 starts, 2023-2025, where a pitcher had at least five prior starts
+      in each condition and his FIP-peripheral rate was at least 1.0 better
+      in tonight's. Mean residual +0.047 runs in the claimed direction (se
+      0.164, t = +0.28): nothing. Built on peripherals rather than ERA
+      precisely because ERA splits are dominated by balls-in-play luck.
+    seen: >-
+      2026-08-30 BOS@NYY. Will Warren carried a 2.26 day ERA against 6.06 at
+      night, a 3.80-run gap. His peripherals told a much smaller story: K/9
+      was actually HIGHER at night (9.21 vs 8.57), and the FIP gap was about
+      1.1 runs rather than 3.8. A split that does not move strikeouts is
+      sequencing luck wearing a pattern.
+
   - id: bullpen_burned
     label: Opponent's bullpen was heavily used in the last 48 hours
     hypothesis: >-
