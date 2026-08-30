@@ -27,17 +27,47 @@ factors:
       recent film. The model sees only his stale FIP EWMA.
     direction: favors the returning pitcher's club
     typical_delta_runs: 0.3
-    test: ops/test_factor.py --factor starter_returning
+    test: ops/test_factor.py --factor starter_returning --sweep
     status: rejected
     evidence: >-
-      1,255 starts across 2023-2025 preceded by a 15+ day gap. Mean residual
-      in the claimed direction is -0.209 runs (se 0.124, t = -1.69): the
-      effect is not significant, and what sign there is points the WRONG way.
-      Returning starters do slightly worse than the model expects, not
-      better, which is the more intuitive story once stated: rust, a pitch
-      count, and a bullpen asked to cover the innings he does not throw.
-    seen: [2026-08-29 BOS@NYY G2 (Fried, won — one game, and the sample says
-      it was luck rather than a repeatable read)]
+      Layoff length matters and pooling it hides the structure. Mean residual
+      in the claimed direction, 2023-2025, by gap band:
+        6-9d    n=5361  +0.020 (t +0.33)   normal rest, no effect
+        10-14d  n= 410  +0.004 (t +0.02)   no effect
+        15-20d  n= 193  -0.027 (t -0.08)   no effect
+        21-40d  n= 229  -0.682 (t -2.41)   SIGNIFICANT, and negative
+        41d+    n= 721  -0.181 (t -1.08)   no effect
+      The read as stated - a returning starter is sharper than his line -
+      is not supported at any length. An earlier pooled 15+ test reported
+      -0.209 (t -1.69); that was an artifact of the 21-40d band and is
+      superseded by this sweep.
+    seen: [2026-08-29 BOS@NYY G2 (Fried, 16-day gap, won). That gap sits in
+      the 15-20d band where the measured effect is zero, so the win was
+      neither predicted nor contradicted by this factor.]
+    note: >-
+      The 2026-08-29 read described Fried as making his first start back
+      from a UCL strain. He was six starts past it: the strain cost him
+      2026-05-13 to 2026-07-22, and this was a separate 16-day gap.
+
+  - id: starter_short_il_return
+    label: Starter returning from a 21-40 day absence
+    hypothesis: >-
+      A three-to-six week absence is long enough to be a real injury but
+      short enough that the pitcher is rushed back before he is right. The
+      model sees only a stale FIP and a rest-days count it clips at 7.
+    direction: AGAINST the returning pitcher's club
+    typical_delta_runs: -0.68
+    test: ops/test_factor.py --factor starter_returning --sweep
+    status: supported
+    evidence: >-
+      n=229 starts, 2023-2025. Mean residual -0.682 runs against the
+      returning pitcher's club (se 0.283, t = -2.41). The effect disappears
+      below 21 days and above 40, which is the shape a real mechanism would
+      have rather than a fishing artifact.
+    note: >-
+      Supported on a single pre-specified sweep of five bands, so treat the
+      magnitude as an upper bound until it survives 2026 out of sample. This
+      belongs in features.py as a rest-band term, not in a human read.
 
   - id: pitcher_matchup_history
     label: Starter has a specific history against this opponent
