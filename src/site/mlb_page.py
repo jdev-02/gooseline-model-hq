@@ -193,8 +193,8 @@ def game_card(r):
     return (f'<div class="card"><div class="match"><span class="teams">{r["away"]} @ '
             f'{r["home"]}</span><span class="date">{r["date"]}</span></div>'
             f'<div class="call">{call}</div><div class="gline">{gline}</div>{sp}'
-            f'<div class="bars">{model_bar}{narr_bar}{mkt_bar}</div>{gaptxt}{rl_row}{note}'
-            f'{verdict_badge(v)}</div>')
+            f'<div class="bars">{model_bar}{narr_bar}{mkt_bar}</div>'
+            f'{gaptxt}{rl_row}{tot_row}{note}{verdict_badge(v)}</div>')
 
 
 def build_parlays(rows, top_n=10):
@@ -281,7 +281,12 @@ def track_record_html():
         f'<td>{r.home_actually_won:.0f}%</td></tr>' for i, r in calib.iterrows())
 
     blocks = []
+    PER_SEASON = 150   # full seasons are ~2400 games; all three inlined made
+                       # the page 1.7 MB, which is unusable on a phone.
     for season, g in hist.groupby("season"):
+        shown = g.tail(PER_SEASON)
+        dropped = len(g) - len(shown)
+        g = shown
         rows = "".join(
             f'<tr><td>{x.gameday}</td><td>{x.away_team} @ {x.home_team}</td>'
             f'<td>{fav_line(x.mu, x.home_team, x.away_team)}</td>'
@@ -293,9 +298,13 @@ def track_record_html():
             f'<td class="{"hit" if x.rl_correct else "miss"}">{x.rl_pick} -1.5 &middot; '
             f'{"HIT" if x.rl_correct else "miss"}</td></tr>'
             for x in g.itertuples(index=False))
+        cap = (f'<p class="sub">Showing the last {len(g)} games of {len(g) + dropped}. '
+               f'The season percentages above are computed over all '
+               f'{len(g) + dropped}; only this listing is truncated, to keep '
+               f'the page loadable on a phone.</p>' if dropped else "")
         blocks.append(
-            f'<details><summary>{season} season &mdash; every game ({len(g)})</summary>'
-            f'<table><tr><th>Date</th><th>Game</th><th>Bayesian Model line</th>'
+            f'<details><summary>{season} season &mdash; last {len(g)} games</summary>'
+            f'{cap}<table><tr><th>Date</th><th>Game</th><th>Bayesian Model line</th>'
             f'<th>Model: home team wins</th><th>Final margin (home first)</th>'
             f'<th>Winner pick</th><th>Run-line pick</th></tr>{rows}</table></details>')
 
@@ -436,5 +445,5 @@ along with the thrill.</p>
 <div id="mrecord" class="panel"><h2>Track Record</h2>{track_record_html()}</div>
 <div id="mb101" class="panel"><h2>Bayesian 101</h2>{B101}</div>
 
-<footer>One model, honestly uncertain. Nothing here is financial advice.</footer>
+<footer>Every number here states its own uncertainty. Informational only.</footer>
 </div>"""

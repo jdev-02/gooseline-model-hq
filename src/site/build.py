@@ -42,6 +42,25 @@ SWITCH_CSS = """
 .page{display:none}.page.on{display:block}
 img.fig{max-width:100%;border-radius:8px;border:1px solid var(--line)}
 .two{display:grid;gap:12px}@media(min-width:700px){.two{grid-template-columns:1fr 1fr}}
+
+/* Mobile. `justify-content:center` on a horizontally scrolling flex row
+   clips the first item past the left edge, which is what cut off the
+   "Today's Slate" tab. Wrap the tabs instead of scrolling them. */
+@media(max-width:760px){
+  nav{flex-wrap:wrap;justify-content:flex-start;overflow-x:visible;
+      gap:6px;padding:8px 12px}
+  nav button{font-size:.78rem;padding:6px 12px}
+  .masthead{padding:14px 12px 4px}
+  .masthead h1.brand{font-size:1.3rem}
+  .masthead p,.masthead .what{font-size:.85rem}
+  .wrap{padding:14px 12px 32px}
+  h1{font-size:1.4rem}
+  .bandbar{flex-wrap:wrap}
+  table{font-size:.75rem}
+  th,td{padding:4px 5px}
+  /* Wide tables scroll inside their own box rather than the page body. */
+  details table,.panel>table{display:block;overflow-x:auto;white-space:nowrap}
+}
 """
 SWITCH_JS = """
 function sport(s){
@@ -106,8 +125,7 @@ ncpgambling.org. Please gamble responsibly.</div>
 Hampshire). The NFL model, its Kalman and ensemble design, and the original site
 are the work of David (<a href="https://github.com/HowlsCastle97"
 style="color:var(--green)">HowlsCastle97</a>), a collaborator on this repository;
-the evaluation methodology and the MLB extension are Gooseline's. One model,
-honestly uncertain.</p>
+the evaluation methodology and the MLB extension are Gooseline's.</p>
 </div>
 """
 
