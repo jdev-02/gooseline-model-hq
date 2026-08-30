@@ -144,10 +144,75 @@ def factor_playoff_push(h, month_from=9, max_gb=6.0):
     return h, late & both_live, "side"
 
 
+def factor_day_night_split(h, min_prior=5, gap_thresh=1.0):
+    """Does a starter's own day/night history predict his next such start?
+
+    The trap: ERA splits over ten starts are mostly balls-in-play luck. This
+    builds each pitcher's split from FIP peripherals only (HR, BB, K), uses
+    strictly prior starts, and asks whether a large prior split predicts the
+    model's residual in the next same-condition start.
+    """
+    pit = pd.read_csv(DATA / "pitcher_game_stats.csv.gz")
+    g = pd.read_csv(DATA / "games.csv", low_memory=False)
+    g["game_id"] = g["game_id"].astype(str)
+    pit["game_id"] = pit["game_id"].astype(str)
+    dn = g.set_index("game_id")["day_night"]
+    starts = pit[pit["is_starter"] == 1].copy()
+    starts["day_night"] = starts["game_id"].map(dn)
+    starts["gameday"] = pd.to_datetime(starts["gameday"])
+    starts = starts.sort_values("gameday")
+    starts["fipnum"] = (13 * starts["hr"].fillna(0)
+                        + 3 * (starts["bb"].fillna(0) + starts["hbp"].fillna(0))
+                        - 2 * starts["so"].fillna(0))
+
+    # Expanding, strictly-prior FIP numerator per inning, split by condition.
+    acc = {}
+    rows = []
+    for r in starts.itertuples(index=False):
+        key_d = (r.pitcher_id, "day")
+        key_n = (r.pitcher_id, "night")
+        dn_i, di = acc.get(key_d, (0.0, 0.0))
+        nn_i, ni = acc.get(key_n, (0.0, 0.0))
+        prior_day = dn_i / di if di > 0 else np.nan
+        prior_night = nn_i / ni if ni > 0 else np.nan
+        n_day = acc.get((r.pitcher_id, "nday"), 0)
+        n_night = acc.get((r.pitcher_id, "nnight"), 0)
+        rows.append((r.game_id, r.pitcher_id, r.is_home, r.day_night,
+                     prior_day, prior_night, n_day, n_night))
+        ip = float(r.ip or 0)
+        if ip > 0:
+            if r.day_night == "day":
+                acc[key_d] = (dn_i + r.fipnum, di + ip)
+                acc[(r.pitcher_id, "nday")] = n_day + 1
+            else:
+                acc[key_n] = (nn_i + r.fipnum, ni + ip)
+                acc[(r.pitcher_id, "nnight")] = n_night + 1
+    s = pd.DataFrame(rows, columns=["game_id", "pid", "is_home", "day_night",
+                                    "prior_day", "prior_night", "n_day", "n_night"])
+    # A pitcher is "split-favoured" tonight if his prior FIP rate in tonight's
+    # condition is at least gap_thresh better than in the other condition.
+    s["this"] = np.where(s["day_night"] == "day", s["prior_day"], s["prior_night"])
+    s["other"] = np.where(s["day_night"] == "day", s["prior_night"], s["prior_day"])
+    s["favoured"] = ((s["other"] - s["this"]) >= gap_thresh) & \
+                    (s[["n_day", "n_night"]].min(axis=1) >= min_prior)
+    s["hurt"] = ((s["this"] - s["other"]) >= gap_thresh) & \
+                (s[["n_day", "n_night"]].min(axis=1) >= min_prior)
+
+    h = h.copy()
+    h["game_id"] = h["game_id"].astype(str)
+    fav_home = set(s[(s.favoured) & (s.is_home == 1)]["game_id"])
+    fav_away = set(s[(s.favoured) & (s.is_home == 0)]["game_id"])
+    # claim: the club whose starter is in his favoured condition is helped
+    h["side"] = np.where(h["game_id"].isin(fav_home), 1.0,
+                         np.where(h["game_id"].isin(fav_away), -1.0, 0.0))
+    return h, h["side"] != 0, "side"
+
+
 FACTORS = {
     "starter_returning": factor_starter_returning,
     "spot_starter": factor_spot_starter,
     "playoff_push": factor_playoff_push,
+    "day_night_split": factor_day_night_split,
 }
 
 ap = argparse.ArgumentParser()
