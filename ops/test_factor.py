@@ -208,11 +208,64 @@ def factor_day_night_split(h, min_prior=5, gap_thresh=1.0):
     return h, h["side"] != 0, "side"
 
 
+def _haversine(lat1, lon1, lat2, lon2):
+    R = 3958.8
+    p1, p2 = np.radians(lat1), np.radians(lat2)
+    dp, dl = p2 - p1, np.radians(lon2 - lon1)
+    a = np.sin(dp / 2) ** 2 + np.cos(p1) * np.cos(p2) * np.sin(dl / 2) ** 2
+    return 2 * R * np.arcsin(np.sqrt(a))
+
+
+def factor_travel(h, miles=1500, max_rest=1):
+    """A club that just crossed the country and plays the next day.
+
+    The model carries rest in days but knows nothing about distance or time
+    zones, so a coast-to-coast trip on one day's rest looks identical to a bus
+    ride across town.
+    """
+    ven = pd.read_csv(DATA / "venues.csv")
+    vmap = ven.set_index("venue_id")[["lat", "lon"]]
+    g = pd.read_csv(DATA / "games.csv", low_memory=False)
+    g["gameday"] = pd.to_datetime(g["gameday"])
+    g = g[g["played"]].sort_values("gameday")
+
+    last = {}          # team -> (gameday, venue_id)
+    trav = {}          # game_id -> (home_miles, away_miles, home_rest, away_rest)
+    for r in g.itertuples(index=False):
+        rec = {}
+        for side in ("home", "away"):
+            t = getattr(r, f"{side}_team")
+            prev = last.get(t)
+            if prev is None or prev[1] not in vmap.index or r.venue_id not in vmap.index:
+                rec[side] = (0.0, 99)
+            else:
+                a, b = vmap.loc[prev[1]], vmap.loc[r.venue_id]
+                d = _haversine(a.lat, a.lon, b.lat, b.lon)
+                rec[side] = (float(d), int((r.gameday - prev[0]).days))
+        trav[str(r.game_id)] = rec
+        for side in ("home", "away"):
+            last[getattr(r, f"{side}_team")] = (r.gameday, r.venue_id)
+
+    h = h.copy()
+    h["game_id"] = h["game_id"].astype(str)
+    hm = h["game_id"].map(lambda k: trav.get(k, {}).get("home", (0, 99))[0])
+    hr = h["game_id"].map(lambda k: trav.get(k, {}).get("home", (0, 99))[1])
+    am = h["game_id"].map(lambda k: trav.get(k, {}).get("away", (0, 99))[0])
+    ar = h["game_id"].map(lambda k: trav.get(k, {}).get("away", (0, 99))[1])
+    home_tired = (hm >= miles) & (hr <= max_rest)
+    away_tired = (am >= miles) & (ar <= max_rest)
+    # claim: the club that just travelled far on short rest is hurt
+    h["side"] = np.where(away_tired & ~home_tired, 1.0,
+                         np.where(home_tired & ~away_tired, -1.0, 0.0))
+    return h, h["side"] != 0, "side"
+
+
 FACTORS = {
     "starter_returning": factor_starter_returning,
     "spot_starter": factor_spot_starter,
     "playoff_push": factor_playoff_push,
     "day_night_split": factor_day_night_split,
+    "travel": factor_travel,
 }
 
 ap = argparse.ArgumentParser()
