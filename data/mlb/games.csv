@@ -44284,8 +44284,8 @@ game_id,game_pk,season,gameday,game_datetime_utc,day_night,game_number,doublehea
 824633,824633,2026,2026-09-01,2026-09-01T23:40:00Z,night,1,N,2.0,4.0,112,158,CHC,MIL,205,205,17.0,Wrigley Field,4.0,9.0,Final,Final,True,9,9.0,571510.0,688107.0,Matthew Boyd,Robert Gasser,6.0,13.0,0.0,2.0,5.0,6.0,4,5,0,4,9,-5.0,1,160,1.0,1.0
 824716,824716,2026,2026-09-01,2026-09-01T22:45:00Z,night,1,N,2.0,3.0,111,136,BOS,SEA,201,200,3.0,Fenway Park,6.0,9.0,Final,Final,True,9,9.0,699151.0,693433.0,Jedixson Paez,Bryan Woo,11.0,14.0,0.0,1.0,8.0,10.0,2,9,4,0,9,-3.0,0,160,1.0,1.0
 825038,825038,2026,2026-09-01,2026-09-02T01:40:00Z,night,1,N,2.0,3.0,109,143,AZ,PHI,203,204,15.0,Chase Field,1.0,7.0,Final,Final,True,9,9.0,593958.0,666200.0,Eduardo Rodriguez,Jesús Luzardo,6.0,13.0,0.0,0.0,6.0,10.0,1,3,0,4,9,-6.0,0,160,1.0,1.0
-822686,822686,2026,2026-09-02,2026-09-02T17:05:00Z,day,1,N,2.0,2.0,120,144,WSH,ATL,204,204,3309.0,Nationals Park,0.0,0.0,In Progress,Live,False,9,3.0,695418.0,656550.0,Brad Lord,Grant Holmes,0.0,1.0,0.0,0.0,0.0,1.0,0,0,0,0,3,,1,161,1.0,1.0
-822851,822851,2026,2026-09-02,2026-09-02T18:35:00Z,day,1,N,3.0,3.0,140,133,TEX,ATH,200,200,5325.0,Globe Life Field,0.0,0.0,Pre-Game,Preview,False,9,1.0,674003.0,682052.0,Cody Bradford,Jacob Lopez,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,1,,1,161,1.0,1.0
+822686,822686,2026,2026-09-02,2026-09-02T17:05:00Z,day,1,N,2.0,2.0,120,144,WSH,ATL,204,204,3309.0,Nationals Park,0.0,0.0,Delayed,Live,False,9,4.0,695418.0,656550.0,Brad Lord,Grant Holmes,0.0,2.0,1.0,0.0,0.0,1.0,0,0,0,0,4,,1,161,1.0,1.0
+822851,822851,2026,2026-09-02,2026-09-02T18:35:00Z,day,1,N,3.0,3.0,140,133,TEX,ATH,200,200,5325.0,Globe Life Field,0.0,0.0,Warmup,Live,False,9,1.0,674003.0,682052.0,Cody Bradford,Jacob Lopez,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,1,,1,161,1.0,1.0
 822931,822931,2026,2026-09-02,2026-09-02T22:40:00Z,night,1,N,3.0,3.0,139,121,TB,NYM,201,204,12.0,Tropicana Field,,,Scheduled,Preview,False,9,,643377.0,663795.0,Griffin Jax,Justin Hagenman,,,,,,,0,0,0,0,0,,0,161,1.0,1.0
 823339,823339,2026,2026-09-02,2026-09-02T22:40:00Z,night,1,N,2.0,3.0,134,137,PIT,SF,205,203,31.0,PNC Park,,,Scheduled,Preview,False,9,,696149.0,694738.0,Bubba Chandler,Landen Roupp,,,,,,,0,0,0,0,0,,0,161,1.0,1.0
 823660,823660,2026,2026-09-02,2026-09-02T23:40:00Z,night,1,N,3.0,3.0,142,116,MIN,DET,202,202,3312.0,Target Field,,,Scheduled,Preview,False,9,,665152.0,623454.0,Dean Kremer,Drew Anderson,,,,,,,0,0,0,0,0,,1,161,1.0,1.0
@@ -44295,7 +44295,7 @@ game_id,game_pk,season,gameday,game_datetime_utc,day_night,game_number,doublehea
 824147,824147,2026,2026-09-02,2026-09-03T00:10:00Z,night,1,N,3.0,4.0,117,145,HOU,CWS,200,202,2392.0,Daikin Park,,,Scheduled,Preview,False,9,,669713.0,663436.0,Hayden Wesneski,Davis Martin,,,,,,,0,0,0,0,0,,0,161,1.0,1.0
 824312,824312,2026,2026-09-02,2026-09-02T19:10:00Z,day,1,N,3.0,3.0,115,110,COL,BAL,203,201,19.0,Coors Field,0.0,0.0,Pre-Game,Preview,False,9,1.0,608372.0,669432.0,Tomoyuki Sugano,Trevor Rogers,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,1,,0,161,1.0,1.0
 824390,824390,2026,2026-09-02,2026-09-02T22:40:00Z,night,1,N,2.0,3.0,114,141,CLE,TOR,202,201,5.0,Progressive Field,,,Scheduled,Preview,False,9,,676282.0,656302.0,Joey Cantillo,Dylan Cease,,,,,,,0,0,0,0,0,,0,161,1.0,1.0
-824470,824470,2026,2026-09-02,2026-09-02T16:40:00Z,day,1,N,3.0,3.0,113,135,CIN,SD,205,203,2602.0,Great American Ball Park,4.0,3.0,In Progress,Live,False,9,3.0,682227.0,663554.0,Brandon Williamson,Casey Mize,5.0,6.0,0.0,0.0,1.0,3.0,4,3,0,0,3,,0,161,1.0,1.0
+824470,824470,2026,2026-09-02,2026-09-02T16:40:00Z,day,1,N,3.0,3.0,113,135,CIN,SD,205,203,2602.0,Great American Ball Park,4.0,3.0,In Progress,Live,False,9,6.0,682227.0,663554.0,Brandon Williamson,Casey Mize,6.0,7.0,0.0,0.0,2.0,5.0,4,3,0,0,6,,0,161,1.0,1.0
 824634,824634,2026,2026-09-02,2026-09-02T23:40:00Z,night,1,N,3.0,4.0,112,158,CHC,MIL,205,205,17.0,Wrigley Field,,,Scheduled,Preview,False,9,,656849.0,694819.0,David Peterson,Jacob Misiorowski,,,,,,,0,0,0,0,0,,1,161,1.0,1.0
 824717,824717,2026,2026-09-02,2026-09-02T20:10:00Z,day,1,N,3.0,3.0,111,136,BOS,SEA,201,200,3.0,Fenway Park,0.0,0.0,Pre-Game,Preview,False,9,1.0,663776.0,682243.0,Patrick Sandoval,Bryce Miller,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,1,,0,161,1.0,1.0
 825037,825037,2026,2026-09-02,2026-09-02T19:40:00Z,day,1,N,3.0,3.0,109,143,AZ,PHI,203,204,15.0,Chase Field,0.0,0.0,Pre-Game,Preview,False,9,1.0,664199.0,691725.0,Taylor Clarke,Andrew Painter,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,1,,0,161,1.0,1.0
@@ -44318,7 +44318,7 @@ game_id,game_pk,season,gameday,game_datetime_utc,day_night,game_number,doublehea
 823905,823905,2026,2026-09-04,2026-09-05T02:10:00Z,night,1,N,1.0,3.0,119,120,LAD,WSH,203,204,22.0,UNIQLO Field at Dodger Stadium,,,Scheduled,Preview,False,9,,,800600.0,,Jackson Kent,,,,,,,0,0,0,0,0,,0,163,1.0,2.0
 824067,824067,2026,2026-09-04,2026-09-05T00:10:00Z,night,1,N,1.0,3.0,118,141,KC,TOR,202,201,7.0,Kauffman Stadium,,,Scheduled,Preview,False,9,,,592791.0,,Jameson Taillon,,,,,,,0,0,0,0,0,,0,163,1.0,1.0
 824146,824146,2026,2026-09-04,2026-09-05T00:10:00Z,night,1,N,1.0,3.0,117,109,HOU,AZ,200,203,2392.0,Daikin Park,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,163,1.0,2.0
-824311,824311,2026,2026-09-04,2026-09-05T00:40:00Z,night,1,N,1.0,3.0,115,138,COL,STL,203,205,19.0,Coors Field,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,163,2.0,1.0
+824311,824311,2026,2026-09-04,2026-09-05T00:40:00Z,night,1,N,1.0,3.0,115,138,COL,STL,203,205,19.0,Coors Field,,,Scheduled,Preview,False,9,,663372.0,,Ryan Feltner,,,,,,,,0,0,0,0,0,,0,163,2.0,1.0
 824424,824424,2026,2026-09-04,2026-09-04T18:10:00Z,day,1,S,1.0,4.0,114,116,CLE,DET,202,202,5.0,Progressive Field,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,1,163,1.0,2.0
 824471,824471,2026,2026-09-04,2026-09-04T22:10:00Z,night,1,N,1.0,3.0,113,158,CIN,MIL,205,205,2602.0,Great American Ball Park,,,Scheduled,Preview,False,9,,695076.0,,Rhett Lowder,,,,,,,,0,0,0,0,0,,1,163,2.0,1.0
 824554,824554,2026,2026-09-04,2026-09-04T23:40:00Z,night,1,N,1.0,3.0,145,142,CWS,MIN,202,202,4.0,Rate Field,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,1,163,1.0,2.0
@@ -44334,7 +44334,7 @@ game_id,game_pk,season,gameday,game_datetime_utc,day_night,game_number,doublehea
 823904,823904,2026,2026-09-05,2026-09-06T01:10:00Z,night,1,N,2.0,3.0,119,120,LAD,WSH,203,204,22.0,UNIQLO Field at Dodger Stadium,,,Scheduled,Preview,False,9,,,676917.0,,Cade Cavalli,,,,,,,0,0,0,0,0,,0,164,1.0,1.0
 824066,824066,2026,2026-09-05,2026-09-05T23:10:00Z,night,1,N,2.0,3.0,118,141,KC,TOR,202,201,7.0,Kauffman Stadium,,,Scheduled,Preview,False,9,,,453286.0,,Max Scherzer,,,,,,,0,0,0,0,0,,0,164,1.0,1.0
 824145,824145,2026,2026-09-05,2026-09-05T23:15:00Z,night,1,N,2.0,3.0,117,109,HOU,AZ,200,203,2392.0,Daikin Park,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,164,1.0,1.0
-824310,824310,2026,2026-09-05,2026-09-06T00:10:00Z,night,1,N,2.0,3.0,115,138,COL,STL,203,205,19.0,Coors Field,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,164,1.0,1.0
+824310,824310,2026,2026-09-05,2026-09-06T00:10:00Z,night,1,N,2.0,3.0,115,138,COL,STL,203,205,19.0,Coors Field,,,Scheduled,Preview,False,9,,690279.0,,Mason Adams,,,,,,,,0,0,0,0,0,,0,164,1.0,1.0
 824389,824389,2026,2026-09-05,2026-09-05T22:10:00Z,night,1,N,3.0,4.0,114,116,CLE,DET,202,202,5.0,Progressive Field,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,1,164,1.0,1.0
 824468,824468,2026,2026-09-05,2026-09-05T22:40:00Z,night,1,N,2.0,3.0,113,158,CIN,MIL,205,205,2602.0,Great American Ball Park,,,Scheduled,Preview,False,9,,671096.0,,Andrew Abbott,,,,,,,,0,0,0,0,0,,1,164,1.0,1.0
 824553,824553,2026,2026-09-05,2026-09-05T23:10:00Z,night,1,N,2.0,3.0,145,142,CWS,MIN,202,202,4.0,Rate Field,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,1,164,1.0,1.0
@@ -44349,7 +44349,7 @@ game_id,game_pk,season,gameday,game_datetime_utc,day_night,game_number,doublehea
 823903,823903,2026,2026-09-06,2026-09-07T02:10:00Z,night,1,N,3.0,3.0,119,120,LAD,WSH,203,204,22.0,UNIQLO Field at Dodger Stadium,,,Scheduled,Preview,False,9,,,674841.0,,Andrew Alvarez,,,,,,,0,0,0,0,0,,0,165,1.0,1.0
 824065,824065,2026,2026-09-06,2026-09-06T18:10:00Z,day,1,N,3.0,3.0,118,141,KC,TOR,202,201,7.0,Kauffman Stadium,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,165,1.0,1.0
 824142,824142,2026,2026-09-06,2026-09-06T18:10:00Z,day,1,N,3.0,3.0,117,109,HOU,AZ,200,203,2392.0,Daikin Park,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,165,1.0,1.0
-824309,824309,2026,2026-09-06,2026-09-06T19:10:00Z,day,1,N,3.0,3.0,115,138,COL,STL,203,205,19.0,Coors Field,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,165,1.0,1.0
+824309,824309,2026,2026-09-06,2026-09-06T19:10:00Z,day,1,N,3.0,3.0,115,138,COL,STL,203,205,19.0,Coors Field,,,Scheduled,Preview,False,9,,685299.0,,Tanner Gordon,,,,,,,,0,0,0,0,0,,0,165,1.0,1.0
 824385,824385,2026,2026-09-06,2026-09-06T17:40:00Z,day,1,N,4.0,4.0,114,116,CLE,DET,202,202,5.0,Progressive Field,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,1,165,1.0,1.0
 824469,824469,2026,2026-09-06,2026-09-06T16:10:00Z,day,1,N,3.0,3.0,113,158,CIN,MIL,205,205,2602.0,Great American Ball Park,,,Scheduled,Preview,False,9,,663903.0,,Brady Singer,,,,,,,,0,0,0,0,0,,1,165,1.0,1.0
 824552,824552,2026,2026-09-06,2026-09-06T22:20:00Z,night,1,N,3.0,3.0,145,142,CWS,MIN,202,202,4.0,Rate Field,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,1,165,1.0,1.0
