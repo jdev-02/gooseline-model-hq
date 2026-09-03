@@ -142,13 +142,22 @@ nav{position:sticky;top:0;z-index:10;background:var(--bg);
   overflow-x:auto;justify-content:center}
 nav button{background:none;border:1px solid var(--white);color:var(--white);
   padding:7px 16px;border-radius:99px;font:600 .85rem "Segoe UI",sans-serif;
-  cursor:pointer;white-space:nowrap}
+  cursor:pointer;white-space:nowrap;transition:background-color .15s,border-color .15s,
+  color .15s,transform .1s}
+nav button:hover{border-color:var(--green);color:var(--green)}
+nav button:active{transform:scale(.96)}
+nav button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 nav button.on{background:var(--green);border-color:var(--green);color:#08120b}
-.panel{display:none}.panel.on{display:block}
+nav button.on:hover{color:#08120b}
+.panel{display:none}
+.panel.on{display:block;animation:fadein .18s ease-out}
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.panel.on{animation:none}}
 .grid{display:grid;gap:10px}
 @media(min-width:700px){.grid{grid-template-columns:1fr 1fr}}
 .card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;
-  padding:11px 13px}
+  padding:11px 13px;transition:border-color .15s}
+.card:hover{border-color:#3a4a37}
 .match{display:flex;justify-content:space-between;align-items:baseline}
 .teams{font-family:"Arial Narrow",sans-serif;font-size:1.05rem;font-weight:700;
   text-transform:uppercase;letter-spacing:.02em}
@@ -174,8 +183,13 @@ nav button.on{background:var(--green);border-color:var(--green);color:#08120b}
 .v-none{background:none;border:1px solid var(--dim);color:var(--dim)}
 .bandbar{display:flex;gap:6px;margin:10px 0}
 .bandbtn{background:none;border:1px solid var(--white);color:var(--white);
-  padding:5px 14px;border-radius:99px;font:600 .8rem "Segoe UI",sans-serif;cursor:pointer}
+  padding:5px 14px;border-radius:99px;font:600 .8rem "Segoe UI",sans-serif;cursor:pointer;
+  transition:background-color .15s,border-color .15s,color .15s,transform .1s}
+.bandbtn:hover{border-color:var(--green);color:var(--green)}
+.bandbtn:active{transform:scale(.96)}
+.bandbtn:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .bandbtn.on{background:var(--green);border-color:var(--green);color:#08120b}
+.bandbtn.on:hover{color:#08120b}
 h2{font-family:"Arial Narrow",sans-serif;font-size:1.15rem;text-transform:uppercase;
   color:var(--green);margin:18px 0 8px}
 table{width:100%;border-collapse:collapse;font-size:.82rem;margin:8px 0}
@@ -189,7 +203,12 @@ td{padding:4px 7px;border-bottom:1px solid #17201850;
 .ev-lo{color:var(--red)}
 details{background:var(--panel2);border:1px solid var(--line);border-radius:10px;
   padding:10px 14px;margin:8px 0}
-summary{cursor:pointer;font-weight:600;color:var(--green);font-size:.9rem}
+summary{cursor:pointer;font-weight:600;color:var(--green);font-size:.9rem;
+  transition:color .15s;border-radius:4px}
+summary:hover{color:#5cf097}
+summary:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+a{transition:color .15s}
+a:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .b101 p{margin:10px 0;font-size:.92rem}
 .b101 b{color:var(--green)}
 .b101 table{max-width:640px}

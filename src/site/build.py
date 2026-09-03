@@ -37,9 +37,17 @@ SWITCH_CSS = """
   color:var(--yellow);margin:10px 0}
 .sport{display:flex;gap:8px;justify-content:center;padding:10px 0 4px}
 .sport button{background:none;border:2px solid var(--green);color:var(--green);
-  padding:8px 22px;border-radius:8px;font:700 .95rem "Segoe UI",sans-serif;cursor:pointer}
+  padding:8px 22px;border-radius:8px;font:700 .95rem "Segoe UI",sans-serif;cursor:pointer;
+  transition:background-color .15s,color .15s,transform .1s}
+.sport button:hover{background:rgba(46,224,111,.12)}
+.sport button:active{transform:scale(.96)}
+.sport button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .sport button.on{background:var(--green);color:#08120b}
-.page{display:none}.page.on{display:block}
+.sport button.on:hover{background:var(--green)}
+.page{display:none}
+.page.on{display:block;animation:pagefade .2s ease-out}
+@keyframes pagefade{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.page.on{animation:none}}
 img.fig{max-width:100%;border-radius:8px;border:1px solid var(--line)}
 .two{display:grid;gap:12px}@media(min-width:700px){.two{grid-template-columns:1fr 1fr}}
 
