@@ -249,6 +249,7 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
                 rec[f"p_over_{ln:g}"] = p_over
                 q = tp.get(f"{ln:g}")
                 ask = q.get("ask") if q else None
+                rec[f"mkt_over_{ln:g}"] = ask
                 if ask is None:
                     continue
                 e_o = p_over - ask - kalshi_fee(ask)

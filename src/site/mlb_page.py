@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import base64
 import itertools
+import re
 from pathlib import Path
 
 import numpy as np
@@ -134,25 +135,51 @@ def game_card(r):
                   f'<b>{p*100:.0f}%</b> of the time &middot; fair price {american(p)} '
                   f'&middot; {tag}</div>')
 
-    # Total runs, priced by the negative-binomial model
+    # Total runs, priced by the negative-binomial model. This used to print
+    # "O7.5 51% · O8.5 41% · O9.5 33%" with the actual call tacked on at the
+    # end as an aside — a reader had no way to tell over from under without
+    # decoding the abbreviation and finding the right clause. Now it leads
+    # with one plain-English sentence naming the side, sized and colored the
+    # same way the moneyline verdict badge is, so the two calls on a card
+    # read the same way.
     tot_row = ""
     mt = r.get("mu_total")
     if mt is not None and not pd.isna(mt):
-        parts = []
-        for ln in (7.5, 8.5, 9.5):
-            po = r.get(f"p_over_{ln:g}")
-            if po is not None and not pd.isna(po):
-                parts.append(f"O{ln:g} <b>{float(po)*100:.0f}%</b>")
         call = str(r.get("total_call") or "")
         te = r.get("total_edge")
-        if call and not call.startswith("no edge") and te is not None and not pd.isna(te):
-            tag = f' &middot; <span class="hit">{call} ({float(te)*100:+.1f}% after fees)</span>'
-        elif call:
-            tag = f' &middot; {call.replace("no edge (best ", "closest: ").rstrip(")")}, no edge'
-        else:
-            tag = ""
-        tot_row = (f'<div class="gap">Total runs: model expects <b>{float(mt):.1f}</b> '
-                   f'&middot; {" &middot; ".join(parts)}{tag}</div>')
+        has_edge = bool(call) and not call.startswith("no edge") and te is not None and not pd.isna(te)
+        src = re.sub(r"^no edge \(best (.+)\)$", r"\1", call)
+        m = re.match(r"(OVER|UNDER)\s+([\d.]+)", src)
+        side, line = (m.group(1).title(), float(m.group(2))) if m else (None, None)
+
+        ladder = []
+        for ln in (7.5, 8.5, 9.5):
+            po = r.get(f"p_over_{ln:g}")
+            if po is None or pd.isna(po):
+                continue
+            po = float(po)
+            lean, p = ("Over", po) if po >= 0.5 else ("Under", 1 - po)
+            bold = ' style="font-weight:700"' if line == ln else ""
+            mk = r.get(f"mkt_over_{ln:g}")
+            mktxt = ""
+            if mk is not None and not pd.isna(mk):
+                mask = float(mk) if lean == "Over" else 1 - float(mk)
+                mktxt = f" (market {mask*100:.0f}%)"
+            ladder.append(f'<span{bold}>{lean} {ln:g}: {p*100:.0f}%{mktxt}</span>')
+
+        if side and line is not None:
+            cls = "v-high" if (has_edge and te > 0.04) else "v-caut" if has_edge else "v-avoid"
+            edge_txt = (f'edge {float(te)*100:+.1f}% after fees' if has_edge
+                       else 'no edge at the current price')
+            tot_row = (f'<div class="gap">Total runs call: '
+                      f'<span class="verdict {cls}" style="padding:2px 10px;font-size:.78rem">'
+                      f'{side} {line:g}</span> &middot; {edge_txt} &middot; '
+                      f'model expects <b>{float(mt):.1f}</b> runs</div>'
+                      f'<div class="gap" style="font-size:.82rem;opacity:.75">'
+                      f'{" &middot; ".join(ladder)}</div>')
+        elif ladder:
+            tot_row = (f'<div class="gap">Total runs: model expects <b>{float(mt):.1f}</b> '
+                      f'&middot; {" &middot; ".join(ladder)} &middot; no price to compare yet</div>')
 
     note = ""
     v = str(r["verdict"])
