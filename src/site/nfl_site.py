@@ -197,17 +197,28 @@ footer{color:var(--dim);font-size:.78rem;margin-top:26px}
 """
 
 TABS_JS = """
-function band(b){
-  document.querySelectorAll('.prow').forEach(r=>{
+// scope defaults to 'nfl' so the original bare band('safe')/tab('week') calls
+// on this page keep working unchanged; the MLB page passes 'mlb' explicitly.
+// Sharing one band-safe id between two Parlay Labs on the combined page meant
+// getElementById always grabbed the first (NFL's), so the MLB filter buttons
+// silently updated the wrong element and never visibly selected.
+function band(b, scope){
+  const root = scope ? (document.getElementById('page-' + scope) || document) : document;
+  root.querySelectorAll('.prow').forEach(r=>{
     r.style.display=(b==='all'||r.classList.contains('band-'+b))?'':'none';});
-  document.querySelectorAll('.bandbtn').forEach(x=>x.classList.remove('on'));
-  document.getElementById('band-'+b).classList.add('on');
+  root.querySelectorAll('.bandbtn').forEach(x=>x.classList.remove('on'));
+  const btnId = scope ? ('band-' + scope + '-' + b) : ('band-' + b);
+  const btn = document.getElementById(btnId);
+  if (btn) btn.classList.add('on');
 }
-function tab(id){
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('on'));
+function tab(id, scope){
+  scope = scope || 'nfl';
+  const root = document.getElementById('page-' + scope) || document;
+  root.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  root.querySelectorAll('nav button').forEach(b=>b.classList.remove('on'));
   document.getElementById(id).classList.add('on');
-  document.getElementById('b-'+id).classList.add('on');
+  const btn = document.getElementById('b-'+id);
+  if (btn) btn.classList.add('on');
   window.scrollTo(0,0);
 }
 """

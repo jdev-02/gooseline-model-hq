@@ -432,11 +432,11 @@ the market's prices imply Y%, and the last column is the average result of a $10
 across many tries. Legs are independent games only, and parlays multiply the house's cut
 along with the thrill.</p>
 <div class="bandbar">
-<button id="band-safe" class="bandbtn" onclick="band('safe')">Safe &le;+120</button>
-<button id="band-balanced" class="bandbtn" onclick="band('balanced')">Balanced</button>
-<button id="band-long" class="bandbtn" onclick="band('long')">Longshot</button>
-<button id="band-moon" class="bandbtn" onclick="band('moon')">Moonshot +1000</button>
-<button id="band-all" class="bandbtn on" onclick="band('all')">All</button>
+<button id="band-mlb-safe" class="bandbtn" onclick="band('safe','mlb')">Safe &le;+120</button>
+<button id="band-mlb-balanced" class="bandbtn" onclick="band('balanced','mlb')">Balanced</button>
+<button id="band-mlb-long" class="bandbtn" onclick="band('long','mlb')">Longshot</button>
+<button id="band-mlb-moon" class="bandbtn" onclick="band('moon','mlb')">Moonshot +1000</button>
+<button id="band-mlb-all" class="bandbtn on" onclick="band('all','mlb')">All</button>
 </div>
 <table><tr><th>Legs</th><th>Model chance</th><th>Market implied chance</th>
 <th>Payout</th><th>Avg profit per $10 bet, win or lose</th></tr>{prows}</table>
