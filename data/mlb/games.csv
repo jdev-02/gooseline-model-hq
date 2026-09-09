@@ -44380,21 +44380,21 @@ game_id,game_pk,season,gameday,game_datetime_utc,day_night,game_number,doublehea
 824792,824792,2026,2026-09-08,2026-09-08T22:35:00Z,night,1,N,2.0,3.0,110,114,BAL,CLE,201,202,2.0,Oriole Park at Camden Yards,5.0,9.0,Final,Final,True,9,9.0,687064.0,676440.0,Brandon Young,Tanner Bibee,6.0,12.0,1.0,0.0,5.0,9.0,5,6,0,3,9,-4.0,0,167,1.0,1.0
 824875,824875,2026,2026-09-08,2026-09-08T23:15:00Z,night,1,N,1.0,3.0,144,139,ATL,TB,204,201,4705.0,Truist Park,1.0,7.0,Final,Final,True,9,9.0,700363.0,642547.0,AJ Smith-Shawver,Freddy Peralta,5.0,11.0,2.0,0.0,5.0,11.0,1,5,0,2,9,-6.0,0,167,1.0,2.0
 824957,824957,2026,2026-09-08,2026-09-09T01:40:00Z,night,1,N,2.0,3.0,133,141,ATH,TOR,200,201,2529.0,Sutter Health Park,2.0,4.0,Final,Final,True,9,9.0,678022.0,667755.0,Jack Perkins,José Soriano,6.0,11.0,0.0,0.0,4.0,5.0,1,4,1,0,9,-2.0,0,167,1.0,1.0
-823090,823090,2026,2026-09-09,2026-09-09T20:10:00Z,day,1,N,2.0,3.0,136,140,SEA,TEX,200,200,680.0,T-Mobile Park,,,Scheduled,Preview,False,9,,807739.0,674003.0,Kade Anderson,Cody Bradford,,,,,,,0,0,0,0,0,,1,168,1.0,1.0
-823172,823172,2026,2026-09-09,2026-09-09T19:45:00Z,day,1,N,3.0,3.0,137,138,SF,STL,203,205,2395.0,Oracle Park,,,Scheduled,Preview,False,9,,694918.0,669467.0,Blade Tidwell,Andre Pallante,,,,,,,0,0,0,0,0,,0,168,1.0,1.0
-823251,823251,2026,2026-09-09,2026-09-09T20:10:00Z,day,1,N,3.0,3.0,135,120,SD,WSH,203,204,2680.0,Petco Park,,,Scheduled,Preview,False,9,,621111.0,800600.0,Walker Buehler,Jackson Kent,,,,,,,0,0,0,0,0,,0,168,1.0,1.0
+823090,823090,2026,2026-09-09,2026-09-09T20:10:00Z,day,1,N,2.0,3.0,136,140,SEA,TEX,200,200,680.0,T-Mobile Park,0.0,0.0,Pre-Game,Preview,False,9,1.0,807739.0,674003.0,Kade Anderson,Cody Bradford,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,1,,1,168,1.0,1.0
+823172,823172,2026,2026-09-09,2026-09-09T19:45:00Z,day,1,N,3.0,3.0,137,138,SF,STL,203,205,2395.0,Oracle Park,0.0,0.0,Pre-Game,Preview,False,9,1.0,694918.0,669467.0,Blade Tidwell,Andre Pallante,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,1,,0,168,1.0,1.0
+823251,823251,2026,2026-09-09,2026-09-09T20:10:00Z,day,1,N,3.0,3.0,135,120,SD,WSH,203,204,2680.0,Petco Park,0.0,0.0,Pre-Game,Preview,False,9,1.0,621111.0,800600.0,Walker Buehler,Jackson Kent,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,1,,0,168,1.0,1.0
 823416,823416,2026,2026-09-09,2026-09-09T22:40:00Z,night,1,N,2.0,3.0,143,117,PHI,HOU,204,200,2681.0,Citizens Bank Park,,,Scheduled,Preview,False,9,,650911.0,686613.0,Cristopher Sánchez,Hunter Brown,,,,,,,0,0,0,0,0,,0,168,1.0,1.0
 823497,823497,2026,2026-09-09,2026-09-09T23:05:00Z,night,1,N,2.0,3.0,147,115,NYY,COL,201,203,3313.0,Yankee Stadium,,,Scheduled,Preview,False,9,,701542.0,608372.0,Will Warren,Tomoyuki Sugano,,,,,,,0,0,0,0,0,,0,168,1.0,1.0
 823739,823739,2026,2026-09-09,2026-09-09T23:40:00Z,night,1,N,3.0,3.0,158,112,MIL,CHC,205,205,32.0,American Family Field,,,Scheduled,Preview,False,9,,701656.0,592332.0,Logan Henderson,Kevin Gausman,,,,,,,0,0,0,0,0,,1,168,1.0,1.0
 823818,823818,2026,2026-09-09,2026-09-09T22:40:00Z,night,1,N,3.0,3.0,146,121,MIA,NYM,204,204,4169.0,loanDepot park,,,Scheduled,Preview,False,9,,676083.0,476594.0,Janson Junk,Robert Stock,,,,,,,0,0,0,0,0,,1,168,1.0,1.0
 823900,823900,2026,2026-09-09,2026-09-10T02:10:00Z,night,1,N,3.0,3.0,119,113,LAD,CIN,203,205,22.0,UNIQLO Field at Dodger Stadium,,,Scheduled,Preview,False,9,,808967.0,695076.0,Yoshinobu Yamamoto,Rhett Lowder,,,,,,,0,0,0,0,0,,0,168,1.0,1.0
 824064,824064,2026,2026-09-09,2026-09-09T23:40:00Z,night,1,N,3.0,3.0,118,109,KC,AZ,202,203,7.0,Kauffman Stadium,,,Scheduled,Preview,False,9,,663738.0,668678.0,Daniel Lynch IV,Zac Gallen,,,,,,,0,0,0,0,0,,0,168,1.0,1.0
-824226,824226,2026,2026-09-09,2026-09-09T17:10:00Z,day,1,N,3.0,3.0,116,142,DET,MIN,202,202,2394.0,Comerica Park,0.0,0.0,Pre-Game,Preview,False,9,1.0,672456.0,805673.0,Keider Montero,Zebby Matthews,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,1,,1,168,1.0,1.0
+824226,824226,2026,2026-09-09,2026-09-09T17:10:00Z,day,1,N,3.0,3.0,116,142,DET,MIN,202,202,2394.0,Comerica Park,0.0,0.0,Delayed Start,Preview,False,9,1.0,672456.0,805673.0,Keider Montero,Zebby Matthews,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,1,,1,168,1.0,1.0
 824549,824549,2026,2026-09-09,2026-09-09T23:40:00Z,night,1,N,2.0,3.0,145,134,CWS,PIT,202,205,4.0,Rate Field,,,Scheduled,Preview,False,9,,663436.0,669199.0,Davis Martin,Lake Bachar,,,,,,,0,0,0,0,0,,0,168,1.0,1.0
-824713,824713,2026,2026-09-09,2026-09-09T22:45:00Z,night,1,N,3.0,3.0,111,108,BOS,LAA,201,200,3.0,Fenway Park,,,Scheduled,Preview,False,9,,687562.0,696270.0,Jake Bennett,Ryan Johnson,,,,,,,0,0,0,0,0,,0,168,1.0,1.0
+824713,824713,2026,2026-09-09,2026-09-09T22:45:00Z,night,1,N,3.0,3.0,111,108,BOS,LAA,201,200,3.0,Fenway Park,,,Pre-Game,Preview,False,9,,687562.0,696270.0,Jake Bennett,Ryan Johnson,,,,,,,0,0,0,0,0,,0,168,1.0,1.0
 824791,824791,2026,2026-09-09,2026-09-09T22:35:00Z,night,1,N,3.0,3.0,110,114,BAL,CLE,201,202,2.0,Oriole Park at Camden Yards,,,Scheduled,Preview,False,9,,669358.0,656492.0,Shane Baz,Foster Griffin,,,,,,,0,0,0,0,0,,0,168,1.0,1.0
 824871,824871,2026,2026-09-09,2026-09-09T23:15:00Z,night,1,N,2.0,3.0,144,139,ATL,TB,204,201,4705.0,Truist Park,,,Scheduled,Preview,False,9,,,643377.0,,Griffin Jax,,,,,,,0,0,0,0,0,,0,168,1.0,1.0
-824956,824956,2026,2026-09-09,2026-09-09T19:05:00Z,day,1,N,3.0,3.0,133,141,ATH,TOR,200,201,2529.0,Sutter Health Park,,,Scheduled,Preview,False,9,,669620.0,680755.0,Brady Basso,Braydon Fisher,,,,,,,0,0,0,0,0,,0,168,1.0,1.0
+824956,824956,2026,2026-09-09,2026-09-09T19:05:00Z,day,1,N,3.0,3.0,133,141,ATH,TOR,200,201,2529.0,Sutter Health Park,0.0,0.0,Pre-Game,Preview,False,9,1.0,669620.0,680755.0,Brady Basso,Braydon Fisher,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,1,,0,168,1.0,1.0
 823088,823088,2026,2026-09-10,2026-09-10T20:10:00Z,day,1,N,3.0,3.0,136,140,SEA,TEX,200,200,680.0,T-Mobile Park,,,Scheduled,Preview,False,9,,669302.0,594798.0,Logan Gilbert,Jacob deGrom,,,,,,,0,0,0,0,0,,1,169,1.0,1.0
 823413,823413,2026,2026-09-10,2026-09-10T17:05:00Z,day,1,N,3.0,3.0,143,117,PHI,HOU,204,200,2681.0,Citizens Bank Park,,,Scheduled,Preview,False,9,,554430.0,,Zack Wheeler,,,,,,,,0,0,0,0,0,,0,169,1.0,1.0
 823499,823499,2026,2026-09-10,2026-09-10T23:05:00Z,night,1,N,3.0,3.0,147,115,NYY,COL,201,203,3313.0,Yankee Stadium,,,Scheduled,Preview,False,9,,608331.0,663372.0,Max Fried,Ryan Feltner,,,,,,,0,0,0,0,0,,0,169,1.0,1.0
@@ -44403,13 +44403,13 @@ game_id,game_pk,season,gameday,game_datetime_utc,day_night,game_number,doublehea
 822684,822684,2026,2026-09-11,2026-09-11T22:45:00Z,night,1,N,1.0,3.0,120,108,WSH,LAA,204,200,3309.0,Nationals Park,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,170,2.0,2.0
 822767,822767,2026,2026-09-11,2026-09-11T23:07:00Z,night,1,N,1.0,3.0,141,110,TOR,BAL,201,201,14.0,Rogers Centre,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,1,170,2.0,2.0
 822930,822930,2026,2026-09-11,2026-09-11T23:10:00Z,night,1,N,1.0,3.0,139,117,TB,HOU,201,200,12.0,Tropicana Field,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,170,1.0,1.0
-823012,823012,2026,2026-09-11,2026-09-12T00:15:00Z,night,1,N,1.0,3.0,138,145,STL,CWS,205,202,2889.0,Busch Stadium,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,170,2.0,1.0
+823012,823012,2026,2026-09-11,2026-09-12T00:15:00Z,night,1,N,1.0,3.0,138,145,STL,CWS,205,202,2889.0,Busch Stadium,,,Scheduled,Preview,False,9,,669461.0,,Matthew Liberatore,,,,,,,,0,0,0,0,0,,0,170,2.0,1.0
 823173,823173,2026,2026-09-11,2026-09-12T02:15:00Z,night,1,N,1.0,3.0,137,135,SF,SD,203,203,2395.0,Oracle Park,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,1,170,2.0,2.0
 823498,823498,2026,2026-09-11,2026-09-11T23:05:00Z,night,1,N,1.0,3.0,147,121,NYY,NYM,201,204,3313.0,Yankee Stadium,,,Scheduled,Preview,False,9,,,690997.0,,Nolan McLean,,,,,,,0,0,0,0,0,,0,170,1.0,2.0
-823659,823659,2026,2026-09-11,2026-09-12T00:10:00Z,night,1,N,1.0,3.0,142,114,MIN,CLE,202,202,3312.0,Target Field,,,Scheduled,Preview,False,9,,,800048.0,,Parker Messick,,,,,,,0,0,0,0,0,,1,170,2.0,2.0
+823659,823659,2026,2026-09-11,2026-09-12T00:10:00Z,night,1,N,1.0,3.0,142,114,MIN,CLE,202,202,3312.0,Target Field,,,Scheduled,Preview,False,9,,671737.0,800048.0,Taj Bradley,Parker Messick,,,,,,,0,0,0,0,0,,1,170,2.0,2.0
 823736,823736,2026,2026-09-11,2026-09-11T23:45:00Z,night,1,N,1.0,3.0,158,113,MIL,CIN,205,205,32.0,American Family Field,,,Scheduled,Preview,False,9,,690986.0,,Kyle Harrison,,,,,,,,0,0,0,0,0,,1,170,2.0,2.0
 823817,823817,2026,2026-09-11,2026-09-11T23:10:00Z,night,1,N,1.0,3.0,146,119,MIA,LAD,204,203,4169.0,loanDepot park,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,170,2.0,2.0
-824227,824227,2026,2026-09-11,2026-09-11T22:40:00Z,night,1,N,1.0,3.0,116,115,DET,COL,202,203,2394.0,Comerica Park,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,170,2.0,1.0
+824227,824227,2026,2026-09-11,2026-09-11T22:40:00Z,night,1,N,1.0,3.0,116,115,DET,COL,202,203,2394.0,Comerica Park,,,Scheduled,Preview,False,9,,664285.0,,Framber Valdez,,,,,,,,0,0,0,0,0,,0,170,2.0,1.0
 824631,824631,2026,2026-09-11,2026-09-11T18:20:00Z,day,1,N,1.0,3.0,112,134,CHC,PIT,205,205,17.0,Wrigley Field,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,1,170,2.0,1.0
 824711,824711,2026,2026-09-11,2026-09-11T23:10:00Z,night,1,N,1.0,3.0,111,118,BOS,KC,201,202,3.0,Fenway Park,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,170,2.0,2.0
 824873,824873,2026,2026-09-11,2026-09-11T23:15:00Z,night,1,N,1.0,3.0,144,143,ATL,PHI,204,204,4705.0,Truist Park,,,Scheduled,Preview,False,9,,519242.0,,Chris Sale,,,,,,,,0,0,0,0,0,,1,170,1.0,1.0
@@ -44418,7 +44418,7 @@ game_id,game_pk,season,gameday,game_datetime_utc,day_night,game_number,doublehea
 822685,822685,2026,2026-09-12,2026-09-12T20:05:00Z,day,1,N,2.0,3.0,120,108,WSH,LAA,204,200,3309.0,Nationals Park,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,171,1.0,1.0
 822768,822768,2026,2026-09-12,2026-09-12T19:07:00Z,day,1,N,2.0,3.0,141,110,TOR,BAL,201,201,14.0,Rogers Centre,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,1,171,1.0,1.0
 822927,822927,2026,2026-09-12,2026-09-12T22:10:00Z,night,1,N,2.0,3.0,139,117,TB,HOU,201,200,12.0,Tropicana Field,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,171,1.0,1.0
-823009,823009,2026,2026-09-12,2026-09-12T23:15:00Z,night,1,N,2.0,3.0,138,145,STL,CWS,205,202,2889.0,Busch Stadium,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,171,1.0,1.0
+823009,823009,2026,2026-09-12,2026-09-12T23:15:00Z,night,1,N,2.0,3.0,138,145,STL,CWS,205,202,2889.0,Busch Stadium,,,Scheduled,Preview,False,9,,681517.0,,Kyle Leahy,,,,,,,,0,0,0,0,0,,0,171,1.0,1.0
 823170,823170,2026,2026-09-12,2026-09-12T20:05:00Z,day,1,N,2.0,3.0,137,135,SF,SD,203,203,2395.0,Oracle Park,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,1,171,1.0,1.0
 823496,823496,2026,2026-09-12,2026-09-12T17:35:00Z,day,1,N,2.0,3.0,147,121,NYY,NYM,201,204,3313.0,Yankee Stadium,,,Scheduled,Preview,False,9,,,804267.0,,Zac Thornton,,,,,,,0,0,0,0,0,,0,171,1.0,1.0
 823657,823657,2026,2026-09-12,2026-09-12T20:10:00Z,day,1,N,2.0,3.0,142,114,MIN,CLE,202,202,3312.0,Target Field,,,Scheduled,Preview,False,9,,,668909.0,,Gavin Williams,,,,,,,0,0,0,0,0,,1,171,1.0,1.0
@@ -44433,13 +44433,13 @@ game_id,game_pk,season,gameday,game_datetime_utc,day_night,game_number,doublehea
 822682,822682,2026,2026-09-13,2026-09-13T17:35:00Z,day,1,N,3.0,3.0,120,108,WSH,LAA,204,200,3309.0,Nationals Park,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,172,1.0,1.0
 822764,822764,2026,2026-09-13,2026-09-13T17:37:00Z,day,1,N,3.0,3.0,141,110,TOR,BAL,201,201,14.0,Rogers Centre,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,1,172,1.0,1.0
 822928,822928,2026,2026-09-13,2026-09-13T17:40:00Z,day,1,N,3.0,3.0,139,117,TB,HOU,201,200,12.0,Tropicana Field,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,172,1.0,1.0
-823008,823008,2026,2026-09-13,2026-09-13T18:15:00Z,day,1,N,3.0,3.0,138,145,STL,CWS,205,202,2889.0,Busch Stadium,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,172,1.0,1.0
+823008,823008,2026,2026-09-13,2026-09-13T18:15:00Z,day,1,N,3.0,3.0,138,145,STL,CWS,205,202,2889.0,Busch Stadium,,,Scheduled,Preview,False,9,,700241.0,,Michael McGreevy,,,,,,,,0,0,0,0,0,,0,172,1.0,1.0
 823171,823171,2026,2026-09-13,2026-09-13T23:20:00Z,day,1,N,3.0,3.0,137,135,SF,SD,203,203,2395.0,Oracle Park,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,1,172,1.0,1.0
 823495,823495,2026,2026-09-13,2026-09-13T17:35:00Z,day,1,N,3.0,3.0,147,121,NYY,NYM,201,204,3313.0,Yankee Stadium,,,Scheduled,Preview,False,9,,,681035.0,,Christian Scott,,,,,,,0,0,0,0,0,,0,172,1.0,1.0
 823658,823658,2026,2026-09-13,2026-09-13T18:10:00Z,day,1,N,3.0,3.0,142,114,MIN,CLE,202,202,3312.0,Target Field,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,1,172,1.0,1.0
 823734,823734,2026,2026-09-13,2026-09-13T18:10:00Z,day,1,N,3.0,3.0,158,113,MIL,CIN,205,205,32.0,American Family Field,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,1,172,1.0,1.0
 823815,823815,2026,2026-09-13,2026-09-13T17:40:00Z,day,1,N,3.0,3.0,146,119,MIA,LAD,204,203,4169.0,loanDepot park,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,172,1.0,1.0
-824225,824225,2026,2026-09-13,2026-09-13T16:10:00Z,day,1,N,3.0,3.0,116,115,DET,COL,202,203,2394.0,Comerica Park,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,172,1.0,1.0
+824225,824225,2026,2026-09-13,2026-09-13T16:10:00Z,day,1,N,3.0,3.0,116,115,DET,COL,202,203,2394.0,Comerica Park,,,Scheduled,Preview,False,9,,695549.0,,Jackson Jobe,,,,,,,,0,0,0,0,0,,0,172,1.0,1.0
 824628,824628,2026,2026-09-13,2026-09-13T18:20:00Z,day,1,N,3.0,3.0,112,134,CHC,PIT,205,205,17.0,Wrigley Field,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,1,172,1.0,1.0
 824708,824708,2026,2026-09-13,2026-09-13T17:35:00Z,day,1,N,3.0,3.0,111,118,BOS,KC,201,202,3.0,Fenway Park,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,0,172,1.0,1.0
 824869,824869,2026,2026-09-13,2026-09-13T17:35:00Z,day,1,N,3.0,3.0,144,143,ATL,PHI,204,204,4705.0,Truist Park,,,Scheduled,Preview,False,9,,,,,,,,,,,,0,0,0,0,0,,1,172,1.0,1.0
