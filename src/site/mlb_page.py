@@ -269,6 +269,46 @@ def _history():
     return pd.read_csv(p) if p.exists() else None
 
 
+def live_performance_html():
+    """Every flagged bet the daily cron has settled, sourced straight from
+    data/mlb/paper_trades.csv. That file was already regenerated every day by
+    mlb-daily.yml; this is the piece that was missing — the numbers went into
+    a CSV in git and nowhere a person would ever see them."""
+    p = DATA / "paper_trades.csv"
+    if not p.exists() or not len(pd.read_csv(p)):
+        return ""
+    t = pd.read_csv(p).sort_values("date")
+    n, wins = len(t), int(t["won"].sum())
+    staked, pnl = t["stake"].sum(), t["pnl"].sum()
+    roi = 100 * pnl / staked if staked else 0.0
+
+    rows = "".join(
+        f'<tr><td>{x.date}</td><td>{x.market}</td><td>{x.pick}</td>'
+        f'<td>{x.ask*100:.0f}&cent;</td><td>{x.edge*100:+.1f}%</td>'
+        f'<td class="{"hit" if x.won else "miss"}">{"WON" if x.won else "lost"}</td>'
+        f'<td class="{"hit" if x.pnl >= 0 else "miss"}">{"+" if x.pnl >= 0 else ""}${x.pnl:.2f}</td>'
+        f'<td>{"+" if x.cum_pnl >= 0 else ""}${x.cum_pnl:.2f}</td></tr>'
+        for x in t.tail(40).itertuples())
+
+    return f"""
+<h2>Live Bet Performance</h2>
+<p class="sub">Every game the model flagged HIGH VALUE, staked at a flat $15 and settled
+against the real final score, updated automatically every morning by the same run that
+prices tomorrow's slate. This is a record of what following the site would have earned,
+not the walk-forward backtest below &mdash; it started 2026-08-27 and is still a small
+sample. Treat the win rate honestly and the dollar figure as a rough slippage estimate
+until this has run for a full season.</p>
+<div class="metrics-row">
+<div class="mrow"><span class="mn">{n}</span><span class="ml">bets settled</span></div>
+<div class="mrow"><span class="mn">{wins}-{n-wins}</span><span class="ml">record</span></div>
+<div class="mrow"><span class="mn">${pnl:+.2f}</span><span class="ml">P&amp;L on ${staked:.0f} staked</span></div>
+<div class="mrow"><span class="mn">{roi:+.1f}%</span><span class="ml">ROI</span></div>
+</div>
+<table><tr><th>Date</th><th>Market</th><th>Pick</th><th>Price</th><th>Edge</th>
+<th>Result</th><th>P&amp;L</th><th>Running total</th></tr>{rows}</table>
+"""
+
+
 def track_record_html():
     hist = _history()
     if hist is None:
@@ -469,7 +509,7 @@ along with the thrill.</p>
 <th>Payout</th><th>Avg profit per $10 bet, win or lose</th></tr>{prows}</table>
 </div>
 
-<div id="mrecord" class="panel"><h2>Track Record</h2>{track_record_html()}</div>
+<div id="mrecord" class="panel">{live_performance_html()}<h2>Track Record</h2>{track_record_html()}</div>
 <div id="mb101" class="panel"><h2>Bayesian 101</h2>{B101}</div>
 
 <footer>Every number here states its own uncertainty. Informational only.</footer>
