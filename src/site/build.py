@@ -9,13 +9,20 @@ grammar, badges and copy register in run units.
 from __future__ import annotations
 
 import argparse
+import base64
 import re
+from pathlib import Path as _Path
 from pathlib import Path
 
 import pandas as pd
 
 import src.site.nfl_site as nfl
 import src.site.mlb_page as mlb
+
+# Gooseline's own favicon, so a browser tab reads as the same company whether
+# the visitor is on gooselinesolutions.com or this page's own GitHub Pages URL.
+_FAVICON_PATH = _Path(__file__).parent / "assets" / "favicon.png"
+_FAVICON_B64 = base64.b64encode(_FAVICON_PATH.read_bytes()).decode() if _FAVICON_PATH.exists() else ""
 
 SWITCH_CSS = """
 .masthead{max-width:920px;margin:0 auto;padding:18px 14px 4px}
@@ -159,6 +166,7 @@ def build(out="docs/index.html", narrative=None, days=1,
     page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Model HQ | Gooseline Solutions</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,{_FAVICON_B64}">
 <meta name="description" content="A portfolio project in applied Bayesian forecasting: Kalman team ratings, walk-forward validation and probability calibration on live public sports data. Informational only; not betting advice.">
 <meta name="robots" content="index,follow">
 <style>{nfl.CSS}{SWITCH_CSS}</style>
