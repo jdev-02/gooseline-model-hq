@@ -25,6 +25,34 @@ jobs:
         with:
           python-version: "3.11"
       - run: uv sync --no-dev --extra torch
+      - name: refresh games.csv from nflverse
+        # This was missing entirely: the NFL side ran on games.csv frozen at
+        # fork time with zero 2026 results in it, ever, on every game already
+        # played. Same validation guard David's weekly-site.yml uses, so a
+        # truncated or error-page response fails loudly instead of poisoning
+        # the model silently.
+        run: |
+          curl -sSfL --retry 3 --retry-delay 5 \
+            https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv \
+            -o /tmp/games.new.csv
+          uv run python - <<'PY'
+          import pandas as pd, sys
+          need = {"game_id","season","game_type","week","gameday","home_team",
+                  "away_team","result","home_qb_id","away_qb_id","home_rest",
+                  "away_rest","div_game","roof","spread_line"}
+          df = pd.read_csv("/tmp/games.new.csv", low_memory=False)
+          missing = need - set(df.columns)
+          if missing: sys.exit(f"games.csv is missing columns: {sorted(missing)}")
+          if len(df) < 7000: sys.exit(f"games.csv looks truncated: {len(df)} rows")
+          print(f"games.csv ok: {len(df)} rows through season {df.season.max()}")
+          PY
+          mv /tmp/games.new.csv data/nfl/games.csv
+      - name: refresh EPA for the season in progress
+        # team_game_stats.csv used to be built once and never again, so the EPA
+        # half of the feature set would freeze while games.csv kept moving.
+        # Not fatal: before week 1 nflverse has not published this file yet.
+        continue-on-error: true
+        run: uv run python src/nfl/prep_pbp.py --refresh-latest --games data/nfl/games.csv --cache data/nfl/team_game_stats.csv
       - name: rundown
         run: uv run python -m src.nfl.rundown --days 8
       - name: settle and score
@@ -36,7 +64,7 @@ jobs:
         run: |
           git config user.name "model-hq-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/nfl/rundown_log.csv docs/index.html || true
+          git add data/nfl/games.csv data/nfl/team_game_stats.csv data/nfl/rundown_log.csv docs/index.html || true
           git diff --cached --quiet && exit 0
           git commit -m "data(nfl): daily rundown $(date -u +%Y-%m-%d)"
           git pull --rebase origin main
