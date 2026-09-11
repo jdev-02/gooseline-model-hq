@@ -49,5 +49,51 @@ set.
 ## NFL
 
 David's model. Walk-forward 2021–2025 season tables live on the site's Track
-Record tab (`src/site/nfl_site.py:history_tables`). A `home_always` / Elo
-row for NFL in this format is still to be added (`src/nfl/baselines.py`).
+Record tab (`src/site/nfl_site.py:history_tables`).
+
+### Against the market (`ops/backtest_nfl_ml.py`, run 2026-09-10)
+
+The Track Record tab reports the model picks winners 63.9% of the time. That
+is not the bettor's question. The bettor's question is whether the model's
+disagreements with the market's *price* make money. Paper-traded against the
+de-vigged Vegas closing moneyline, $15 flat, betting every game where the
+model's win probability beat the market by the threshold:
+
+| Slice | Bets | Win % | ROI |
+|---|---|---|---|
+| 2021 | 182 | 35.2% | −5.2% |
+| 2022 | 169 | 32.5% | −19.5% |
+| 2023 | 165 | 33.3% | −11.3% |
+| 2024 | 179 | 36.3% | −19.2% |
+| 2025 | 176 | 40.3% | −6.4% |
+| **All, edge ≥ 4%** | **871** | **35.6%** | **−12.3%** |
+| edge ≥ 8% | 474 | 36.3% | −6.6% |
+| edge ≥ 12% | 240 | 35.8% | −4.4% |
+| edge ≥ 20% | 58 | 37.9% | +1.1% |
+| model backs the favorite | 170 | 61.2% | −4.5% |
+| model backs the underdog | 701 | 29.4% | −14.1% |
+| week 1 | 55 | 41.8% | −8.3% |
+| weeks 5+ | 650 | 34.0% | −13.3% |
+
+Every season negative. Every threshold below 20% negative. Every week
+negative. Against the spread the same walk-forward shows 49.2% (breakeven
+52.4%). The favorite row is the cleanest reading: −4.5% is the vig, meaning
+when the model backs a favorite it carries no information the price does
+not already hold. The underdog row is where the money goes: the model
+systematically overrates underdogs, and 701 of its 871 flags are underdogs.
+
+**Verdict: the NFL model does not beat the market on any tested market.**
+By this repo's own rule it has not passed its gate, and its HIGH VALUE
+badges should not be read as bets until something changes that.
+
+What this does *not* say: it does not say the model is badly built. Picking
+64% of winners with public data is competent. It says the market is better,
+which is the normal finding for public-data NFL models and the reason the
+methodology insists on this test before any probability is bet.
+
+Caveat on comparability: the MLB gate above compared against Elo and
+home-always baselines, not against the market, because `games.csv` for MLB
+carries no historical odds. MLB's only market evidence is the live paper
+trade since 2026-08-27, which is positive but small. MLB is unproven against
+the market, not proven; running this same backtest for MLB needs a
+historical-odds source and is the next thing to do.
