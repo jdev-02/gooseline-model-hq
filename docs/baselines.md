@@ -109,6 +109,29 @@ The ensemble is worse than the linear proxy on every slice (linear 2025:
 −6.4%). The nonlinearity buys confidence, not information. Caveat closed:
 the model that produces the site's verdicts does not beat the market.
 
+### Does the model add anything to the market? (`ops/experiment_nfl_market_blend.py`)
+
+Blend `a*model + (1-a)*market` and find the `a` that minimises Brier. If it is
+zero, the model carries no information the price does not already hold.
+
+| | Brier |
+|---|---|
+| Vegas alone (a=0) | **0.2118** |
+| model alone (a=1) | 0.2215 |
+| best blend, pooled | a = **0.0** |
+| best blend, walk-forward (choose a on prior seasons) | a* -> 0.00 by 2024; market wins every season |
+
+Calibration by market bucket shows the mechanism. Where Vegas says 23%, home
+teams win 23% and the model says 31%. Where Vegas says 78%, they win 80% and
+the model says 73%. **The model is shrunk toward 50/50**; every disagreement
+it has with the market is "this game is closer than you think", and it is
+wrong. That is not a tuning problem. The feature set does not contain
+information Vegas lacks, and no reweighting of it will. An NFL edge would
+need new inputs (injury reports, weather, line movement), not a better fit.
+
+Kalshi tracks Vegas within about 1.2 cents on NFL moneylines (max 3.3c over
+week 1, 2026), so there is no Kalshi-specific mispricing to exploit either.
+
 Caveat on comparability: the MLB gate above compared against Elo and
 home-always baselines, not against the market, because `games.csv` for MLB
 carries no historical odds. MLB's only market evidence is the live paper
