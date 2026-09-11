@@ -7,9 +7,10 @@ All sources are keyless and public.
 | Purpose | Endpoint | Tier |
 |---|---|---|
 | Teams | `statsapi.mlb.com/api/v1/teams?sportId=1&season=Y` | A |
-| Schedule, scores, probable pitchers, venue, day/night, per-inning linescore | `/api/v1/schedule?sportId=1&season=Y&gameType=R&hydrate=probablePitcher,decisions,linescore,venue` | A (1 call/season) |
+| Schedule, scores, probable pitchers, venue, day/night, per-inning linescore, home-plate umpire, game-time weather | `/api/v1/schedule?sportId=1&season=Y&gameType=R&hydrate=probablePitcher,decisions,linescore,venue,weather,officials` | A (1 call/season) |
 | Per-game team and per-pitcher lines | `/api/v1/game/{gamePk}/boxscore` | B (1 call/game, ~170 KB) |
 | Live probables at rundown time | schedule endpoint with `startDate`/`endDate`, never cached | — |
+| Game-hour temperature forecast for upcoming games | `api.open-meteo.com/v1/forecast` (hourly `temperature_2m`, batched by venue lat/lon) | — |
 | Market | Kalshi `KXMLBGAME`, `KXMLBSPREAD`, `KXMLBTOTAL` | — |
 
 Tier A alone yields a valid, degraded model (pitcher features fall back to
@@ -31,7 +32,18 @@ uv run python -c "from src.mlb.compile import *; ..."   # see run_phase0 / READM
   `played` = Final with both scores. `day_index` = days since that season's
   first game (the Kalman step). `home_rest`/`away_rest` in days (doubleheader
   game 2 = 0). Linescore-derived: `*_hits`, `*_errors`, `*_lob`,
-  `*_runs_first6`, `*_runs_late` (innings 7+).
+  `*_runs_first6`, `*_runs_late` (innings 7+). Totals inputs from the
+  schedule hydrate: `hp_umpire_id`/`hp_umpire`, `temp_f`, `wind_mph`,
+  `wind_dir` (`Out To CF`, `In From LF`, `L To R`, `Calm`, `Varies`, ...),
+  `condition` (`Roof Closed`/`Dome` mark the weather terms moot). Coverage
+  2008–2026: umpire and temperature 100%, wind ≥ 93%. Before first pitch the
+  weather and umpire are blank until about first pitch, so
+  `rundown.refresh_probables` re-reads both every run and, for the games
+  still ahead, takes game-hour temperature from the Open-Meteo forecast
+  (`src/mlb/weather.py`, free, no key, one batched call using
+  `data/mlb/venues.csv` coordinates). If that fails too, the feature builder
+  falls back to the venue's own month-of-year history, and treats a venue
+  that has closed its roof in at least half of that month's games as closed.
 - `data/mlb/team_game_stats.csv` — two rows per game keyed `(game_id, team)`:
   batting and pitching lines, `p_strike_pct`, `brpi_off/def` (baserunners per
   inning), `lob_rate_off`, late-inning runs.

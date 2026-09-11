@@ -167,6 +167,15 @@ def game_card(r):
                 mktxt = f" (market {mask*100:.0f}%)"
             ladder.append(f'<span{bold}>{lean} {ln:g}: {p*100:.0f}%{mktxt}</span>')
 
+        # Weather is the input the market prices by hand, so it is shown.
+        wx = ""
+        if r.get("roof_closed") in (True, 1, 1.0, "True"):
+            wx = " &middot; roof closed"
+        else:
+            tf = r.get("temp_f")
+            if tf is not None and not pd.isna(tf):
+                wx = f" &middot; {int(float(tf))}&deg;F at first pitch"
+
         if side and line is not None:
             cls = "v-high" if (has_edge and te > 0.04) else "v-caut" if has_edge else "v-avoid"
             edge_txt = (f'edge {float(te)*100:+.1f}% after fees' if has_edge
@@ -174,11 +183,11 @@ def game_card(r):
             tot_row = (f'<div class="gap">Total runs call: '
                       f'<span class="verdict {cls}" style="padding:2px 10px;font-size:.78rem">'
                       f'{side} {line:g}</span> &middot; {edge_txt} &middot; '
-                      f'model expects <b>{float(mt):.1f}</b> runs</div>'
+                      f'model expects <b>{float(mt):.1f}</b> runs{wx}</div>'
                       f'<div class="gap" style="font-size:.82rem;opacity:.75">'
                       f'{" &middot; ".join(ladder)}</div>')
         elif ladder:
-            tot_row = (f'<div class="gap">Total runs: model expects <b>{float(mt):.1f}</b> '
+            tot_row = (f'<div class="gap">Total runs: model expects <b>{float(mt):.1f}</b>{wx} '
                       f'&middot; {" &middot; ".join(ladder)} &middot; no price to compare yet</div>')
 
     note = ""

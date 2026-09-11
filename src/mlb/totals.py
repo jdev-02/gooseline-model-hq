@@ -28,11 +28,43 @@ TOTAL_FEATURE_COLS = [
     "bp_workload_sum",  # tired pens give up runs
     "log_park_factor",  # the single largest environmental term for totals
     "day_night",
-    "roof_or_dh",       # placeholder for future weather; DH-game-2 fatigue
+    "roof_or_dh",       # DH-game-2 fatigue flag
+    # Weather. Temperature is the one addition since the pitcher block that
+    # moved the walk-forward: 2023-2025 Brier at 8.5 from 0.2485 to 0.2475,
+    # and the raw relationship is a monotone two-run climb from cold to hot.
+    # Wind is kept for its physical sign; it was worth a tenth of temperature.
+    "temp_c70",         # (game-time temp - 70F) / 10; zero under a roof
+    "wind_out",         # signed mph/10: out to the field +, in from it -; zero under a roof
+    "roof_closed",      # dome or roof closed: weather terms are moot
 ]
+# Computed alongside but not shipped: the home-plate umpire's running effect
+# on total runs. Ablation on 2023-2025 put it at 0.0001 Brier, and the
+# assignment is not public until lineups post, hours after the daily run.
+STUDY_COLS = ["ump_runs"]
 
 LEAGUE_TOTAL_DEFAULT = 8.8
 K9_DEFAULT = 8.5
+UMP_SHRINK_K = 30.0        # games behind an umpire before his number is half his own
+UMP_HALF_LIFE = 120.0      # games; zones drift with the rulebook, so not a plain mean
+ROOF_CLOSED = {"Roof Closed", "Dome"}
+CLIM_MIN_GAMES = 10        # venue-month history before it stands in for a missing temp
+ROOF_ASSUME_RATE = 0.5     # unplayed game at a venue that closes this often: assume closed
+
+
+def _wind_signed(mph, direction):
+    """Out To * is positive, In From * negative, cross/varies/calm zero."""
+    if mph is None or direction is None or (isinstance(mph, float) and np.isnan(mph)):
+        return 0.0
+    d = str(direction)
+    if d.startswith("Out To"):
+        return float(mph)
+    if d.startswith("In From"):
+        return -float(mph)
+    return 0.0
+
+
+def _nan_to_none(x):
+    return None if x is None or (isinstance(x, float) and np.isnan(x)) else x
 
 
 def build_total_features(df, team_lookup=None, pitcher_stats=None, park_fn=None,
@@ -53,13 +85,24 @@ def build_total_features(df, team_lookup=None, pitcher_stats=None, park_fn=None,
     sp_fip, sp_k9, sp_last = {}, {}, {}
     bp_fip, bp_ip_log = {}, {}
     lg_num = lg_ip = lg_er = lg_k = 0.0
+    # Umpire effect is measured as a residual against the league's running
+    # total, so a hitter-friendly era does not read as a hitter-friendly crew.
+    d_ump = _decay(UMP_HALF_LIFE)
+    ump = {}
+    lg_total = _Ewma(_decay(400.0), LEAGUE_TOTAL_DEFAULT)
+    has_wx = {"hp_umpire_id", "temp_f", "wind_mph", "wind_dir", "condition"} <= set(df.columns)
+    # Fallbacks for games not yet played, whose weather is a blank until first
+    # pitch: the venue's own history for that month. Both are expanding over
+    # prior games only, like everything else in this loop.
+    clim = {}        # (venue_id, month) -> [n, sum of temp_f], open-roof games
+    roof_hist = {}   # (venue_id, month) -> [n, n closed]
 
     pit_by_game = {}
     if pitcher_stats is not None and len(pitcher_stats):
         for key, grp in pitcher_stats.groupby("game_id"):
             pit_by_game[key] = grp
 
-    cols = {c: np.zeros(n) for c in TOTAL_FEATURE_COLS}
+    cols = {c: np.zeros(n) for c in TOTAL_FEATURE_COLS + STUDY_COLS}
 
     for i, r in enumerate(df.itertuples(index=False)):
         h, a = r.home_team, r.away_team
@@ -98,10 +141,43 @@ def build_total_features(df, team_lookup=None, pitcher_stats=None, park_fn=None,
         cols["day_night"][i] = 1.0 if r.day_night == "night" else 0.0
         cols["roof_or_dh"][i] = 1.0 if int(getattr(r, "game_number", 1)) > 1 else 0.0
 
+        ump_id = _nan_to_none(getattr(r, "hp_umpire_id", None)) if has_wx else None
+        if ump_id is not None and ump_id in ump:
+            e = ump[ump_id]
+            cols["ump_runs"][i] = e.v * e.n / (e.n + UMP_SHRINK_K)
+        vm = (r.venue_id, r.gameday.month)
+        cond = _nan_to_none(getattr(r, "condition", None)) if has_wx else None
+        if cond is not None:
+            roof = str(cond) in ROOF_CLOSED
+        else:
+            rh = roof_hist.get(vm)
+            roof = bool(rh and rh[0] >= CLIM_MIN_GAMES and rh[1] / rh[0] >= ROOF_ASSUME_RATE)
+        cols["roof_closed"][i] = 1.0 if roof else 0.0
+        if has_wx and not roof:
+            t = _nan_to_none(getattr(r, "temp_f", None))
+            if t is None:
+                c = clim.get(vm)
+                t = c[1] / c[0] if c and c[0] >= CLIM_MIN_GAMES else None
+            cols["temp_c70"][i] = (float(t) - 70.0) / 10.0 if t is not None else 0.0
+            cols["wind_out"][i] = _wind_signed(_nan_to_none(getattr(r, "wind_mph", None)),
+                                               _nan_to_none(getattr(r, "wind_dir", None))) / 10.0
+
         if pd.isna(r.result):
             continue
         # ---- update state from this game ----
         hs, as_ = float(r.home_score), float(r.away_score)
+        if ump_id is not None:
+            ump.setdefault(ump_id, _Ewma(d_ump, 0.0)).push((hs + as_) - lg_total.v)
+        lg_total.push(hs + as_)
+        if cond is not None:
+            rh = roof_hist.setdefault(vm, [0, 0])
+            rh[0] += 1
+            rh[1] += int(roof)
+            t_obs = _nan_to_none(getattr(r, "temp_f", None))
+            if not roof and t_obs is not None:
+                c = clim.setdefault(vm, [0, 0.0])
+                c[0] += 1
+                c[1] += float(t_obs)
         rs[h] = d_form * rs.get(h, half) + (1 - d_form) * hs
         rs[a] = d_form * rs.get(a, half) + (1 - d_form) * as_
         ra[h] = d_form * ra.get(h, half) + (1 - d_form) * as_

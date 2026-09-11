@@ -194,6 +194,50 @@ that actually move totals and that the market may under-price: home-plate
 umpire, weather and wind at outdoor parks, posted lineups. Those are the
 research direction; nothing else in this file is.
 
+### Totals: umpire and weather (`ops/run_totals.py`, run 2026-09-11)
+
+StatsAPI's schedule hydrates the home-plate umpire and game-time weather
+for every game back to 2008 (44,631 games; umpire and temperature 100%,
+wind ≥ 93%). Walk-forward 2023–2025, negative binomial, against the
+park-adjusted floor:
+
+| Feature set | Brier @7.5 | Brier @8.5 | Brier @9.5 | RMSE | count NLL |
+|---|---|---|---|---|---|
+| park_adjusted_mean (floor) | — | 0.2499 | — | 4.482 | — |
+| previous set (pitchers, park, form) | 0.2424 | 0.2485 | 0.2377 | 4.465 | 2.8633 |
+| + umpire + temperature + wind + roof | 0.2416 | 0.2475 | 0.2366 | 4.452 | 2.8605 |
+| − umpire | 0.2416 | 0.2476 | 0.2367 | 4.453 | 2.8607 |
+| − temperature | 0.2424 | 0.2483 | 0.2376 | 4.463 | 2.8628 |
+| − wind | 0.2417 | 0.2476 | 0.2367 | 4.453 | 2.8608 |
+
+The margin over the floor went from 0.0014 to 0.0024 Brier, the first
+feature addition to move this model since the pitcher block, and
+**temperature is the whole of it**. The raw relationship is a monotone
+two-run climb: open-roof games average 8.43 runs below 60°F and 10.56
+above 90°F. Its standardised coefficient (+0.035) is second only to park
+factor (+0.054). Wind and the umpire are each worth 0.0001, which is noise;
+wind stays for its physical sign, the umpire is computed for study but not
+shipped (`STUDY_COLS`), since the assignment is also not public until
+lineups post, hours after the daily run.
+
+Shipped set (`data/mlb/totals_config.json`): previous columns plus
+`temp_c70`, `wind_out`, `roof_closed`. Gate PASS; every populated decile
+within 0.049 at all three traded lines.
+
+The inference problem: StatsAPI leaves the weather blank until about first
+pitch, so the daily run would have priced every game at 70°F. The rundown
+now takes game-hour temperature from the Open-Meteo forecast
+(`src/mlb/weather.py`), falling back to the venue's month-of-year history
+(R² 0.54 against the actual, residual 7.6°F vs 11.1°F raw) and treating a
+venue that closes its roof in half or more of that month's games as closed.
+The temperature the model used is written to the narrative log so the
+forecast can be checked against the recorded value once the game settles.
+
+What this does not say: it does not say the market misses temperature.
+Every sportsbook prices weather. It says the model now has the input, and
+the paper trade against Kalshi (`ops/backtest_mlb_totals_market.py`,
+re-run nightly) is the only test of whether the price already holds it.
+
 ### Where this leaves the mandate
 
 | Market | Result | Status |
@@ -202,7 +246,7 @@ research direction; nothing else in this file is.
 | NFL spread | 49.2% vs 52.4% breakeven | dead |
 | MLB moneyline | −20% at the HIGH VALUE rule, blend weight 0 | dead on this feature set |
 | MLB run line | 40–44% cover rate | dead |
-| MLB totals | indistinguishable from Kalshi on 85 games | **track; add umpire/weather/lineup** |
+| MLB totals | indistinguishable from Kalshi on 85 games; temperature added 2026-09-11 (Brier 0.2485 → 0.2476) | **track; lineups next** |
 | NFL totals | no model | not built |
 
 Both moneyline models share one mechanism: tuned to minimise error against

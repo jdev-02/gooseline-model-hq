@@ -75,6 +75,16 @@ def price_totals(df, upcoming, cfg_t):
     from src.mlb.totals import build_total_features, NegBinomTotal
     from src.mlb.park import build_park_factors, park_lookup
     games = load_games(keep_unplayed=True, first_season=cfg_t.get("first_season", 2008))
+    # `df` carries the live refresh (probables, status, forecast weather) for
+    # the horizon; games.csv on disk does not. Without this overlay the
+    # totals model priced every game at 70F and never saw a scratch.
+    live_cols = [c for c in ("home_sp_id", "away_sp_id", "status", "temp_f",
+                             "wind_mph", "wind_dir", "condition", "hp_umpire_id")
+                 if c in df.columns and c in games.columns]
+    fresh = df[df["game_pk"].isin(upcoming["game_pk"])].drop_duplicates("game_pk").set_index("game_pk")
+    m = games["game_pk"].isin(fresh.index)
+    for c in live_cols:
+        games.loc[m, c] = games.loc[m, "game_pk"].map(fresh[c]).values
     park = build_park_factors(games)
     tdf = build_total_features(games, load_team_game_stats(),
                                load_pitcher_game_stats(), park_lookup(park))
@@ -93,8 +103,13 @@ def price_totals(df, upcoming, cfg_t):
     X = up_t[cols].values
     mu, _ = nb.predict_dist(X)
     out = {}
+    temps = up_t["temp_f"].tolist() if "temp_f" in up_t else [None] * len(up_t)
+    roofs = up_t["roof_closed"].tolist()
     for j, pk in enumerate(up_t["game_pk"].tolist()):
+        t = temps[j]
         out[pk] = {"mu_total": round(float(mu[j]), 2),
+                   "temp_f": None if t is None or pd.isna(t) else int(t),
+                   "roof_closed": bool(roofs[j]),
                    "lines": {ln: round(float(nb.prob_over(X[j:j + 1], ln)[0]), 3)
                              for ln in TOTAL_LINES}}
     return out
@@ -115,7 +130,7 @@ def refresh_probables(games, start, end):
     """Overwrite probable pitchers / status for the horizon from the live API
     (never cached) so a late scratch is seen before the run."""
     live = fetch_live_schedule(start, end)
-    upd = {}
+    upd, wx_upd = {}, {}
     for d in live.get("dates", []):
         for g in d["games"]:
             hp = g["teams"]["home"].get("probablePitcher", {})
@@ -123,6 +138,34 @@ def refresh_probables(games, start, end):
             upd[g["gamePk"]] = (hp.get("id"), ap_.get("id"),
                                 hp.get("fullName"), ap_.get("fullName"),
                                 g["status"].get("detailedState"))
+            # Weather is a forecast until first pitch and the plate umpire
+            # posts with the lineups, so both are re-read every run. Only
+            # fields the API actually carries are written; a blank never
+            # overwrites what the season pull already had.
+            wx = g.get("weather", {}) or {}
+            off = next((o for o in g.get("officials", []) or []
+                        if o.get("officialType") == "Home Plate"), {})
+            row = {}
+            if wx.get("temp") not in (None, ""):
+                try:
+                    row["temp_f"] = int(wx["temp"])
+                except (TypeError, ValueError):
+                    pass
+            wind = wx.get("wind") or ""
+            if " mph" in wind:
+                try:
+                    row["wind_mph"] = int(wind.split(" mph")[0].strip())
+                except ValueError:
+                    pass
+                if "," in wind:
+                    row["wind_dir"] = wind.split(",", 1)[1].strip()
+            if wx.get("condition"):
+                row["condition"] = wx["condition"]
+            if off.get("official", {}).get("id"):
+                row["hp_umpire_id"] = off["official"]["id"]
+                row["hp_umpire"] = off["official"].get("fullName")
+            if row:
+                wx_upd[g["gamePk"]] = row
     for pk, (hsp, asp, hnm, anm, st) in upd.items():
         m = games["game_pk"] == pk
         if m.any():
@@ -130,6 +173,20 @@ def refresh_probables(games, start, end):
             # freshly announced starter rendering as TBD on the card.
             games.loc[m, ["home_sp_id", "away_sp_id", "status"]] = [hsp, asp, st]
             games.loc[m, ["home_sp_name", "away_sp_name"]] = [hnm, anm]
+            for k, v in wx_upd.get(pk, {}).items():
+                if k in games.columns:
+                    games.loc[m, k] = v
+    # StatsAPI leaves the weather blank until about first pitch, so for the
+    # games still ahead take the game-hour temperature from a forecast.
+    if "temp_f" in games.columns:
+        from src.mlb.weather import forecast_temps
+        horizon = games["game_pk"].isin(list(upd)) & games["temp_f"].isna()
+        if horizon.any():
+            fc = forecast_temps(games[horizon])
+            for pk, t in fc.items():
+                games.loc[games["game_pk"] == pk, "temp_f"] = t
+            print(f"weather: forecast temperature for {len(fc)}/{int(horizon.sum())} "
+                  f"upcoming games", file=sys.stderr)
     return games
 
 
@@ -242,6 +299,8 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
         t = totals.get(r.game_pk)
         if t:
             rec["mu_total"] = t["mu_total"]
+            rec["temp_f"] = t.get("temp_f")
+            rec["roof_closed"] = t.get("roof_closed")
             tp = tot_prices.get((str(r.gameday.date()), r.away_team,
                                  r.home_team, int(r.game_number)), {})
             best_t, best_desc = None, ""
@@ -269,7 +328,8 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
           f"{'ensemble' if ens is not None else 'linear'}, prices: {price_source} ===")
     print(table.drop(columns=["note"]).to_string(index=False))
     print("\nHIGH VALUE = model edge over the Kalshi ask after the 7% fee. Apply the news check "
-          "(scratches, lineups, weather) before acting; the model cannot see them.")
+          "(scratches, lineups, a roof or forecast change since the run) before acting; "
+          "the model cannot see them.")
     if log_path:
         Path(log_path).parent.mkdir(parents=True, exist_ok=True)
         new = table.assign(run_ts=pd.Timestamp.utcnow().isoformat(timespec="seconds"),

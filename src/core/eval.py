@@ -135,11 +135,14 @@ def reliability_diagram(
     p_pred: np.ndarray,
     n_bins: int = 10,
     label: str = "Model",
+    show: bool = False,
 ):
     """Bin predictions by predicted probability, plot empirical vs stated.
 
     A perfectly calibrated model lies on y=x. Returns (fig, calibration_table).
     Use to decide whether isotonic / sigmoid calibration is needed before betting.
+    `show` defaults off: callers save the figure, and an unconditional
+    plt.show() blocked the test suite on a desktop backend.
     """
     y = np.asarray(y_true_binary).ravel().astype(float)
     p = np.asarray(p_pred).ravel().astype(float)
@@ -170,6 +173,7 @@ def reliability_diagram(
     ax.set_title(f"Reliability - {label} (Brier={brier_score(y, p):.4f})")
     ax.legend()
     fig.tight_layout()
-    plt.show()
+    if show:
+        plt.show()
 
     return fig, rows
