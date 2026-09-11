@@ -30,6 +30,11 @@ jobs:
           uv run python ops/compile_mlb.py --games-only
       - name: fill results into the narrative log
         run: uv run python ops/settle_log.py
+      - name: market backtests (grow with the log)
+        continue-on-error: true
+        run: |
+          uv run python ops/backtest_mlb_market.py        > data/mlb/market_backtest_ml.txt     2>&1 || true
+          uv run python ops/backtest_mlb_totals_market.py > data/mlb/market_backtest_totals.txt 2>&1 || true
       - name: paper-trade P&L
         # Must run before the site build below: it was running after, so the
         # site's Live Bet Performance section always showed yesterday's
@@ -44,7 +49,7 @@ jobs:
         run: |
           git config user.name "model-hq-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/mlb/raw/schedule/2026.json.gz data/mlb/games.csv data/mlb/narrative/log.csv data/mlb/paper_trades.csv docs/index.html
+          git add data/mlb/raw/schedule/2026.json.gz data/mlb/games.csv data/mlb/narrative/log.csv data/mlb/paper_trades.csv data/mlb/market_backtest_ml.txt data/mlb/market_backtest_totals.txt docs/index.html
           git diff --cached --quiet && exit 0
           git commit -m "data(mlb): daily rundown $(date -u +%Y-%m-%d)"
           git pull --rebase origin main

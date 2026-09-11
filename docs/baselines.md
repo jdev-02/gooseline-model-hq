@@ -168,3 +168,45 @@ carries no historical odds. MLB's only market evidence is the live paper
 trade since 2026-08-27, which is positive but small. MLB is unproven against
 the market, not proven; running this same backtest for MLB needs a
 historical-odds source and is the next thing to do.
+
+### MLB totals against Kalshi (`ops/backtest_mlb_totals_market.py`, run 2026-09-11)
+
+The only market in either sport where the model has not been shown to be
+worse than the price. 85 games with both a model and a Kalshi quote.
+
+| Line | Brier, pooled | Brier, 2nd half only | ≥4% paper, pooled | ≥4% paper, 2nd half |
+|---|---|---|---|---|
+| O/U 7.5 | model 0.2357 < Kalshi 0.2375 | **Kalshi** 0.2323 < model 0.2360 | 26 bets, +10.3% | 12 bets, −23.3% |
+| O/U 8.5 | model 0.2398 < Kalshi 0.2439 | **Kalshi** 0.2449 < model 0.2455 | 29 bets, +2.9% | 11 bets, +3.7% |
+| O/U 9.5 | Kalshi 0.2273 < model 0.2285 | Kalshi 0.2301 < model 0.2322 | 22 bets, +25.1% | 8 bets, +30.9% |
+
+Read carefully: the pooled Brier advantage at 7.5 and 8.5 is carried
+entirely by the first 37 games and **does not replicate on the second 48**,
+where Kalshi wins at every line. The positive paper ROIs sit on 8–29 bets
+and swing from −100% to +54% as the threshold moves, which is what noise
+looks like. One mildly consistent lean: when the model says UNDER, the
+over hits 2–4 points less often than Kalshi implies, at all three lines.
+
+**Verdict: unknown, not alive.** Totals is the only market not proven
+worse than Kalshi, and the only one worth continuing to track. It is not
+bettable on 85 games. It needs several hundred, and it needs the inputs
+that actually move totals and that the market may under-price: home-plate
+umpire, weather and wind at outdoor parks, posted lineups. Those are the
+research direction; nothing else in this file is.
+
+### Where this leaves the mandate
+
+| Market | Result | Status |
+|---|---|---|
+| NFL moneyline | −12% (linear) / −17% (ensemble), blend weight 0 | dead on this feature set |
+| NFL spread | 49.2% vs 52.4% breakeven | dead |
+| MLB moneyline | −20% at the HIGH VALUE rule, blend weight 0 | dead on this feature set |
+| MLB run line | 40–44% cover rate | dead |
+| MLB totals | indistinguishable from Kalshi on 85 games | **track; add umpire/weather/lineup** |
+| NFL totals | no model | not built |
+
+Both moneyline models share one mechanism: tuned to minimise error against
+*outcomes*, they converge on the base rate and sit shrunk toward 50/50,
+under-rating favorites by 5–7 points. A market is already calibrated to
+outcomes; being calibrated too is not an edge. An edge needs information
+the market misprices, and this feature set does not contain any.
