@@ -287,8 +287,13 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
             age = ((now - pd.Timestamp(asof)).total_seconds() / 60.0) if asof is not None else None
             if age is None and price_source != "live":
                 ts = latest_snapshot_ts(db_path)
-                age = ((now - pd.Timestamp(ts).tz_localize("UTC")).total_seconds() / 60.0
-                       if ts else None)
+                if ts:
+                    # Snapshot timestamps may carry an offset or not; this
+                    # path only runs when the live API is down, and it used
+                    # to crash the whole run on a tz-aware value.
+                    t = pd.Timestamp(ts)
+                    t = t.tz_localize("UTC") if t.tzinfo is None else t.tz_convert("UTC")
+                    age = (now - t).total_seconds() / 60.0
             rec["price_age_min"] = None if age is None else round(age, 1)
             for p, ek, vk in ((p_home[j], "edge", "verdict"), (p_n, "edge_narrative", "verdict_narrative")):
                 e_h = (p - hp - kalshi_fee(hp)) if hp is not None else -1

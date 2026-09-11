@@ -1,10 +1,16 @@
 name: mlb-daily
 
-# 11:00 ET: refresh the current season's schedule, fill in yesterday's results,
-# run the rundown against the latest logged prices, rebuild the site.
+# Refresh the current season's schedule, fill in yesterday's results, run the
+# rundown against the latest logged prices, rebuild the site, then prove it
+# with ops/healthcheck.py. Three slots because GitHub's schedule is
+# best-effort (the single 11:00 slot silently did not fire on 2026-09-11);
+# every run is idempotent (the log and paper trade keep the last row per
+# game), and the later slots see posted probables and fresher prices.
 on:
   schedule:
     - cron: "0 15 * * *"         # 11:00 ET (EDT)
+    - cron: "30 16 * * *"        # 12:30 ET
+    - cron: "0 20 * * *"         # 16:00 ET, before the early first pitches
   workflow_dispatch:
 
 permissions:
@@ -41,16 +47,34 @@ jobs:
         # total, one full cycle behind whatever the cron had just settled.
         continue-on-error: true
         run: uv run python ops/paper_trade.py --stake 15 --min-edge 0.04
-      - name: rundown + site
-        run: |
-          uv run python -m src.mlb.rundown --days 1 --db data/kalshi_prices.db
-          uv run python -m src.site.build --db data/kalshi_prices.db
+      - name: rundown
+        run: uv run python -m src.mlb.rundown --days 1 --db data/kalshi_prices.db
+      - name: health gate (data)
+        # Verifies the schedule was refreshed, yesterday settled, every
+        # upcoming game got a row with a probability, a total, a temperature
+        # and a price. Failures are recorded in health.json (the site shows
+        # them) and fail the job at the end, after the commit, so a bad run
+        # is visible rather than invisible.
+        id: health_data
+        continue-on-error: true
+        run: uv run python ops/healthcheck.py --stage data
+      - name: site
+        run: uv run python -m src.site.build --db data/kalshi_prices.db
+      - name: health gate (site)
+        id: health_site
+        continue-on-error: true
+        run: uv run python ops/healthcheck.py --stage site
       - name: commit
         run: |
           git config user.name "model-hq-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/mlb/raw/schedule/2026.json.gz data/mlb/games.csv data/mlb/narrative/log.csv data/mlb/paper_trades.csv data/mlb/market_backtest_ml.txt data/mlb/market_backtest_totals.txt docs/index.html
+          git add data/mlb/raw/schedule/2026.json.gz data/mlb/games.csv data/mlb/narrative/log.csv data/mlb/paper_trades.csv data/mlb/market_backtest_ml.txt data/mlb/market_backtest_totals.txt data/mlb/health.json docs/index.html
           git diff --cached --quiet && exit 0
-          git commit -m "data(mlb): daily rundown $(date -u +%Y-%m-%d)"
+          git commit -m "data(mlb): daily rundown $(date -u +%Y-%m-%dT%H:%MZ)"
           git pull --rebase origin main
           git push origin HEAD:main
+      - name: fail if unhealthy
+        if: steps.health_data.outcome == 'failure' || steps.health_site.outcome == 'failure'
+        run: |
+          jq -r '.hard_failures[]' data/mlb/health.json | sed 's/^/HARD FAIL: /'
+          exit 1

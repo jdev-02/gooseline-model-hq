@@ -56,6 +56,19 @@ SWITCH_CSS = """
 @keyframes pagefade{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){.page.on{animation:none}}
 img.fig{max-width:100%;border-radius:8px;border:1px solid var(--line)}
+/* Freshness strip: the run's own audit, above the first card. */
+.health{border:1px solid var(--line);border-left:4px solid var(--green);border-radius:8px;
+  padding:8px 12px;margin:6px 0 14px;font-size:.82rem;background:var(--panel2)}
+.health.warn{border-left-color:var(--yellow)}
+.health.fail{border-left-color:#e5484d}
+.health .facts{opacity:.8}
+.health details{margin-top:4px}
+.health summary{cursor:pointer;color:var(--green);font-size:.78rem}
+.health ul{margin:6px 0 0 18px;padding:0}
+.health li{margin:2px 0}
+.health li.ok{opacity:.75}
+.health li.warn{color:var(--yellow)}
+.health li.fail{color:#e5484d;font-weight:700}
 .two{display:grid;gap:12px}@media(min-width:700px){.two{grid-template-columns:1fr 1fr}}
 
 /* Mobile. `justify-content:center` on a horizontally scrolling flex row
@@ -162,6 +175,14 @@ def build(out="docs/index.html", narrative=None, days=1,
     from src.mlb.rundown import rundown
     table = rundown(days=days, db_path=db, narrative_path=narrative, log_path=None)
     slate = table.to_dict("records") if table is not None else []
+    health_p = Path("data/mlb/health.json")
+    health = None
+    if health_p.exists():
+        import json
+        health = json.loads(health_p.read_text())
+        # A stale record is worse than none: only show it for this slate.
+        if health.get("slate_date") != str(today):
+            health = None
 
     page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -175,7 +196,7 @@ def build(out="docs/index.html", narrative=None, days=1,
 <div class="sport"><button id="sw-nfl" onclick="sport('nfl')">NFL</button>
 <button id="sw-mlb" class="on" onclick="sport('mlb')">MLB</button></div>
 <div id="page-nfl" class="page">{nfl_body}</div>
-<div id="page-mlb" class="page on">{mlb.render(slate, today)}</div>
+<div id="page-mlb" class="page on">{mlb.render(slate, today, health)}</div>
 {DISCLAIMER}
 </body></html>"""
     Path(out).parent.mkdir(parents=True, exist_ok=True)

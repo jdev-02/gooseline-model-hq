@@ -462,7 +462,41 @@ usually right; this system exists to find the exceptions and to know the differe
 </div>"""
 
 
-def render(slate, today):
+def health_strip(health):
+    """One line a reader can trust before any number: when the run was made,
+    from what, and whether every facet checked out. Built from
+    data/mlb/health.json (ops/healthcheck.py); absent when no gate has run."""
+    if not health:
+        return ('<div class="health warn">No health record for this build. '
+                'Treat every number below as unverified.</div>')
+    checks = [c for c in health.get("checks", []) if c.get("stage") == "data"]
+    fails = [c for c in checks if not c["ok"] and c["hard"]]
+    warns = [c for c in checks if not c["ok"] and not c["hard"]]
+    ts = pd.Timestamp(health.get("run_ts")).strftime("%Y-%m-%d %H:%M UTC")
+    by = {c["name"]: c["detail"] for c in checks}
+    facts = " &middot; ".join(x for x in (
+        f"run {ts}",
+        f"slate {health.get('slate_date')}",
+        f"games priced {by.get('every upcoming game priced', '?').split(',')[0]}",
+        f"prices {by.get('Kalshi prices fresh', '?').split(' priced')[0]} fresh" if "Kalshi prices fresh" in by else "",
+        f"weather {by.get('weather at every open-roof game', '?').split(' have')[0]}" if "weather at every open-roof game" in by else "",
+        f"starters {by.get('probable pitchers known', '?').split(' games')[0]}" if "probable pitchers known" in by else "",
+    ) if x)
+    if fails:
+        cls, head = "fail", f"{len(fails)} check{'s' if len(fails) > 1 else ''} FAILED: " + ", ".join(c["name"] for c in fails)
+    elif warns:
+        cls, head = "warn", f"all hard checks passed; {len(warns)} warning{'s' if len(warns) > 1 else ''}: " + ", ".join(c["name"] for c in warns)
+    else:
+        cls, head = "ok", f"all {len(checks)} checks passed"
+    rows = "".join(
+        f'<li class="{"ok" if c["ok"] else ("fail" if c["hard"] else "warn")}">'
+        f'{c["name"]}: {c["detail"]}</li>' for c in checks)
+    return (f'<div class="health {cls}"><b>Run health:</b> {head}<br>'
+            f'<span class="facts">{facts}</span>'
+            f'<details><summary>every check</summary><ul>{rows}</ul></details></div>')
+
+
+def render(slate, today, health=None):
     cards = "".join(game_card(r) for r in slate) or \
         '<p class="sub">No games in the upcoming window.</p>'
     parlays = build_parlays(slate)
@@ -483,6 +517,7 @@ def render(slate, today):
 <div class="wrap">
 <h1>MLB <span>Model</span> HQ</h1>
 <p class="sub">A Bayesian run-differential model &middot; generated {today}</p>
+{health_strip(health)}
 
 <div id="mweek" class="panel on">
 <h2>Today's Slate</h2>

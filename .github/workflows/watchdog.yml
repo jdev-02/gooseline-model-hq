@@ -1,0 +1,119 @@
+name: watchdog
+
+# GitHub's schedule is best-effort: on 2026-09-11 the 11:00 ET mlb-daily
+# cron simply did not fire, and nothing noticed. This job asks GitHub's own
+# run history and the committed health.json whether today's runs happened
+# and passed, re-dispatches anything missing or failed, and keeps exactly
+# one issue open until everything is green again.
+on:
+  schedule:
+    - cron: "30 17 * * *"    # 13:30 ET, after the second mlb-daily slot
+    - cron: "30 21 * * *"    # 17:30 ET, before the first pitches
+    - cron: "0 2 * * *"      # 22:00 ET, catches a missed evening snapshot
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: audit today's runs
+        id: audit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          today=$(date -u -d '-4 hours' +%Y-%m-%d)     # slate date, Eastern
+          since="${today}T14:00:00Z"                    # 10:00 ET
+          problems=()
+          notes=()
+
+          # A workflow is "done today" if a run created after `since` concluded success.
+          done_today () {
+            gh run list --workflow "$1" --created ">=$since" --status success --limit 1 \
+              --json databaseId --jq 'length'
+          }
+          latest_state () {
+            gh run list --workflow "$1" --created ">=$since" --limit 1 \
+              --json status,conclusion --jq '.[0] | "\(.status)/\(.conclusion // "-")"' || echo "none"
+          }
+
+          for wf in mlb-daily.yml nfl-daily.yml; do
+            n=$(done_today "$wf")
+            st=$(latest_state "$wf")
+            if [ "$n" = "0" ]; then
+              case "$st" in
+                in_progress/*|queued/*) notes+=("$wf is running now ($st)");;
+                *) problems+=("$wf has no successful run today (latest: $st)")
+                   gh workflow run "$wf" --ref main && notes+=("re-dispatched $wf");;
+              esac
+            else
+              notes+=("$wf ok")
+            fi
+          done
+
+          # The price snapshot must be recent during market hours (10:00-23:30 ET).
+          hour_et=$(date -u -d '-4 hours' +%H)
+          if [ "$hour_et" -ge 10 ] || [ "$hour_et" -le 0 ]; then
+            last=$(gh run list --workflow kalshi-snapshot.yml --status success --limit 1 \
+                     --json createdAt --jq '.[0].createdAt // ""')
+            if [ -z "$last" ] || [ $(( $(date -u +%s) - $(date -u -d "$last" +%s) )) -gt 5400 ]; then
+              problems+=("kalshi-snapshot: last success ${last:-never}, over 90 min ago")
+              gh workflow run kalshi-snapshot.yml --ref main && notes+=("re-dispatched kalshi-snapshot")
+            else
+              notes+=("kalshi-snapshot ok ($last)")
+            fi
+          fi
+
+          # The committed health gate from the last mlb-daily.
+          if [ -f data/mlb/health.json ]; then
+            hok=$(jq -r '.ok' data/mlb/health.json)
+            hdate=$(jq -r '.slate_date' data/mlb/health.json)
+            hfail=$(jq -r '.hard_failures | join(", ")' data/mlb/health.json)
+            if [ "$hdate" != "$today" ]; then
+              problems+=("health.json is for $hdate, not $today")
+            elif [ "$hok" != "true" ]; then
+              problems+=("health gate failed: $hfail")
+            else
+              notes+=("health gate ok for $today")
+            fi
+          else
+            problems+=("data/mlb/health.json missing")
+          fi
+
+          {
+            echo "problems<<EOF"; printf '%s\n' "${problems[@]:-}"; echo "EOF"
+            echo "notes<<EOF"; printf '%s\n' "${notes[@]:-}"; echo "EOF"
+            echo "count=${#problems[@]}"
+            echo "today=$today"
+          } >> "$GITHUB_OUTPUT"
+          printf 'PROBLEMS (%d):\n%s\n\nNOTES:\n%s\n' "${#problems[@]}" "${problems[*]:-none}" "${notes[*]:-}"
+
+      - name: keep one issue current
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          COUNT: ${{ steps.audit.outputs.count }}
+          PROBLEMS: ${{ steps.audit.outputs.problems }}
+          NOTES: ${{ steps.audit.outputs.notes }}
+          TODAY: ${{ steps.audit.outputs.today }}
+        run: |
+          set -euo pipefail
+          title="health: daily runs need attention"
+          num=$(gh issue list --label watchdog --state open --json number --jq '.[0].number // ""')
+          body=$(printf 'Watchdog at %s UTC for slate %s.\n\n**Problems**\n```\n%s\n```\n**Notes**\n```\n%s\n```\nRe-dispatched runs, if any, are listed under notes. This issue closes itself when a later check is clean.\n' \
+                   "$(date -u +%H:%M)" "$TODAY" "${PROBLEMS:-none}" "${NOTES:-}")
+          if [ "$COUNT" != "0" ]; then
+            gh label create watchdog --color d73a4a --description "opened by the watchdog workflow" 2>/dev/null || true
+            if [ -n "$num" ]; then gh issue comment "$num" --body "$body"
+            else gh issue create --title "$title" --label watchdog --body "$body"; fi
+          elif [ -n "$num" ]; then
+            gh issue close "$num" --comment "$body"
+          fi

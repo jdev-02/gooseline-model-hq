@@ -75,6 +75,27 @@ uv run python -m src.site.build --mlb-narrative data/mlb/narrative/2026-08-27.ya
 - Conventional Commits, `feat/` `fix/` `chore/` `docs/` branches, PR to `main`.
 - `uv run pytest` must be green before pushing.
 
+## Operations
+
+Everything runs on GitHub Actions; no laptop is in the loop.
+
+- `mlb-daily` fires at three slots (11:00, 12:30, 16:00 ET) because GitHub's
+  schedule is best-effort and a single slot once silently did not fire. Every
+  run is idempotent: the log and the paper trade keep the last row per game.
+- Each run ends with `ops/healthcheck.py`, a hard gate that checks the
+  schedule was refreshed, yesterday settled, every upcoming game got a
+  probability, a total, a temperature and a fresh Kalshi price, the frozen
+  configs match the code, and the built page contains every matchup. The
+  result is committed as `data/mlb/health.json` and shown on the MLB page as
+  the run-health strip; a failed gate fails the job after the commit, so it
+  is visible rather than invisible.
+- `watchdog` (13:30, 17:30, 22:00 ET) asks GitHub's own run history whether
+  today's `mlb-daily`, `nfl-daily` and `kalshi-snapshot` succeeded and reads
+  the committed health record; it re-dispatches anything missing and keeps one
+  `watchdog`-labelled issue open until a later check is clean.
+- `kalshi-snapshot` logs prices every 30 minutes through the market day;
+  `upstream-watch` diffs David's repo weekly.
+
 ## Credits
 
 NFL model, Kalman/ensemble design, and the site: David (HowlsCastle97).

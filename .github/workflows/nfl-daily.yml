@@ -6,6 +6,7 @@ name: nfl-daily
 on:
   schedule:
     - cron: "0 16 * * *"        # 12:00 ET
+    - cron: "0 19 * * *"        # 15:00 ET, second slot; GitHub's schedule is best-effort
   workflow_dispatch:
 
 permissions:
