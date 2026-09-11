@@ -91,6 +91,24 @@ What this does *not* say: it does not say the model is badly built. Picking
 which is the normal finding for public-data NFL models and the reason the
 methodology insists on this test before any probability is bet.
 
+### Ensemble check (`ops/backtest_nfl_ml_ensemble.py --season 2025`, run 2026-09-10)
+
+The table above walks forward the linear model, because `history_tables`
+uses it as a fast proxy. The live badges come from the deep ensemble. Walked
+forward over 2025 alone (272 games, refit weekly):
+
+| Slice | Bets | Win % | ROI |
+|---|---|---|---|
+| edge ≥ 4% | 189 | 38.6% | **−17.5%** |
+| edge ≥ 8% | 110 | 37.3% | −20.0% |
+| edge ≥ 12% | 61 | 42.6% | −5.1% |
+| backs the favorite | 65 | 60.0% | −10.4% |
+| backs the underdog | 124 | 27.4% | −21.2% |
+
+The ensemble is worse than the linear proxy on every slice (linear 2025:
+−6.4%). The nonlinearity buys confidence, not information. Caveat closed:
+the model that produces the site's verdicts does not beat the market.
+
 Caveat on comparability: the MLB gate above compared against Elo and
 home-always baselines, not against the market, because `games.csv` for MLB
 carries no historical odds. MLB's only market evidence is the live paper
