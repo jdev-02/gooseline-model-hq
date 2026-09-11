@@ -1,0 +1,35 @@
+MLB, 171 priced+settled games, 2026-08-27 -> 2026-09-10
+
+Brier (lower is better):
+  Kalshi alone (a=0):   0.2394
+  model alone  (a=1):   0.2463
+  coin flip:            0.2500
+
+Blend a*model + (1-a)*Kalshi:
+  a=0.00  brier=0.2394
+  a=0.25  brier=0.2405
+  a=0.50  brier=0.2420
+  a=0.75  brier=0.2440
+  a=1.00  brier=0.2463
+  best a = 0.00
+
+Honest split: choose a on first half (87 games) -> a*=0.00; test on second half (84 games): Kalshi 0.2330 vs blend 0.2330 -> Kalshi better
+
+Paper trade vs live Kalshi ask, after 7% fee, $15 flat:
+  edge >= 0%                 bets  128  win  40.6%  P&L  -228.80  ROI  -11.9%
+  edge >= 2%                 bets   91  win  39.6%  P&L  -151.87  ROI  -11.1%
+  edge >= 4%                 bets   46  win  34.8%  P&L  -139.93  ROI  -20.3%
+  edge >= 6%                 bets   23  win  26.1%  P&L  -129.06  ROI  -37.4%
+  edge >= 8%                 bets   11  win  18.2%  P&L   -77.85  ROI  -47.2%
+  backs favorite (>=4%)      bets    6  win  50.0%  P&L    -6.91  ROI   -7.7%
+  backs underdog (>=4%)      bets   40  win  32.5%  P&L  -133.02  ROI  -22.2%
+
+Calibration by KALSHI probability bucket:
+  Kalshi (0.0, 0.35]   n=  2  home won  50.0%   Kalshi said  33.2%   model said  37.9%
+  Kalshi (0.35, 0.45]  n= 26  home won  46.2%   Kalshi said  40.9%   model said  41.1%
+  Kalshi (0.45, 0.55]  n= 74  home won  43.2%   Kalshi said  50.3%   model said  48.1%
+  Kalshi (0.55, 0.65]  n= 49  home won  61.2%   Kalshi said  59.8%   model said  54.9%
+  Kalshi (0.65, 1.0]   n= 20  home won  70.0%   Kalshi said  68.8%   model said  61.5%
+
+TOTALS (over 8.5), 90 games:
+  Brier Kalshi 0.2420   model 0.2380   best blend a=1.00
