@@ -132,7 +132,37 @@ need new inputs (injury reports, weather, line movement), not a better fit.
 Kalshi tracks Vegas within about 1.2 cents on NFL moneylines (max 3.3c over
 week 1, 2026), so there is no Kalshi-specific mispricing to exploit either.
 
-Caveat on comparability: the MLB gate above compared against Elo and
+### MLB moneyline against Kalshi (`ops/backtest_mlb_market.py`, run 2026-09-11)
+
+Every game the daily run priced since 2026-08-27, not just the flagged ones,
+against the live Kalshi ask it was priced at, settled by `settle_log.py`.
+166 games. This is the market the model actually bets, so it is the test
+that matters; the Elo gate above only showed the model knows *something*.
+
+| | Brier |
+|---|---|
+| Kalshi alone (a=0) | **0.2397** |
+| model alone (a=1) | 0.2464 |
+| best blend weight on the model | **0.00** (pooled and on an honest first-half/second-half split) |
+
+| Paper trade, $15 flat, after fee | Bets | Win % | ROI |
+|---|---|---|---|
+| edge ≥ 4% (the HIGH VALUE rule) | 46 | 34.8% | **−20.3%** |
+| edge ≥ 8% | 11 | 18.2% | −47.2% |
+| backs the underdog (≥ 4%) | 40 | 32.5% | −22.2% |
+
+The ROI gets *worse* as the threshold rises: the more the model disagrees
+with Kalshi, the more wrong it is. Same shape as the NFL result, same
+mechanism — where Kalshi says 69% the model says 61%; where Kalshi says 60%
+the model says 55%. Shrunk toward 50/50, over-rating underdogs.
+
+`ops/paper_trade.py` (the site's Live Bet Performance section) agrees to the
+bet: 46 bets, 34.8%, −20.3%. The +24.6% it showed on 2026-09-03 was 17 bets.
+
+**Verdict: the MLB moneyline model does not beat Kalshi either.** Same
+disease as NFL, same conclusion: the moneyline feature set is exhausted.
+
+ the MLB gate above compared against Elo and
 home-always baselines, not against the market, because `games.csv` for MLB
 carries no historical odds. MLB's only market evidence is the live paper
 trade since 2026-08-27, which is positive but small. MLB is unproven against
