@@ -1,0 +1,45 @@
+name: upstream-watch
+
+# David maintains the NFL model in HowlsCastle97/nfl-model-hq; this repo
+# carries a restructured copy under src/nfl. It fell 26 commits behind before
+# anyone noticed. This job checks weekly and keeps ONE open issue current with
+# whatever has landed upstream that we have not ported. Detection is automatic;
+# porting stays a human review, because his model-logic changes need the
+# walk-forward gate before they ship here.
+on:
+  schedule:
+    - cron: "0 13 * * 1"   # Mondays 09:00 ET
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: fetch upstream
+        run: |
+          git remote add upstream https://github.com/HowlsCastle97/nfl-model-hq.git 2>/dev/null || true
+          git fetch upstream main
+      - name: compare and report
+        env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+        run: |
+          n=$(git rev-list --count HEAD..upstream/main)
+          gh label create upstream-nfl --color 0E8A16 --description "Commits on David's NFL repo not yet ported" --force >/dev/null 2>&1 || true
+          existing=$(gh issue list --label upstream-nfl --state open --json number --jq '.[0].number // empty')
+          if [ "$n" -eq 0 ]; then
+            [ -n "$existing" ] && gh issue close "$existing" --comment "Upstream and src/nfl are level as of $(date -u +%Y-%m-%d)." || true
+            echo "level with upstream"; exit 0
+          fi
+          body=$(printf 'Upstream `HowlsCastle97/nfl-model-hq` has **%s** commit(s) not yet ported into `src/nfl`.\n\n```\n%s\n```\n\nFiles touched:\n```\n%s\n```\n\nPort into `src/nfl/` and re-run `ops/backtest_nfl_ml.py` before shipping. Updated %s.' \
+            "$n" "$(git log --oneline HEAD..upstream/main)" "$(git diff --stat HEAD upstream/main -- . ':!docs' ':!games.csv' | tail -25)" "$(date -u +%Y-%m-%dT%H:%MZ)")
+          title="Upstream NFL model: $n commit(s) to port"
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --title "$title" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body" --label upstream-nfl
+          fi
