@@ -16,7 +16,7 @@ from pathlib import Path
 import requests
 
 BASE = "https://statsapi.mlb.com/api/v1"
-SCHEDULE_HYDRATE = "probablePitcher,decisions,linescore,venue"
+SCHEDULE_HYDRATE = "probablePitcher,decisions,linescore,venue,weather,officials"
 RAW = Path("data/mlb/raw")
 
 

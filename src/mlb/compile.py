@@ -50,6 +50,25 @@ def compile_games(seasons, cache_dir=RAW, teams=None):
                 hs, as_ = _linescore_side(ls, "home"), _linescore_side(ls, "away")
                 played = st.get("abstractGameState") == "Final" and \
                     h.get("score") is not None and a.get("score") is not None
+                # Home-plate umpire and game-time weather ride along on the
+                # schedule hydrate. Both are totals inputs the market may
+                # under-price; neither is a moneyline feature.
+                hp = next((o for o in g.get("officials", []) or []
+                           if o.get("officialType") == "Home Plate"), {})
+                wx = g.get("weather", {}) or {}
+                wind_raw = wx.get("wind", "") or ""
+                wind_mph, wind_dir = None, None
+                if " mph" in wind_raw:
+                    try:
+                        wind_mph = int(wind_raw.split(" mph")[0].strip())
+                    except ValueError:
+                        pass
+                    if "," in wind_raw:
+                        wind_dir = wind_raw.split(",", 1)[1].strip()
+                try:
+                    temp_f = int(wx.get("temp")) if wx.get("temp") not in (None, "") else None
+                except (TypeError, ValueError):
+                    temp_f = None
                 rows.append({
                     "game_id": str(g["gamePk"]), "game_pk": g["gamePk"], "season": season,
                     "gameday": d["date"], "game_datetime_utc": g["gameDate"],
@@ -80,6 +99,10 @@ def compile_games(seasons, cache_dir=RAW, teams=None):
                     "home_runs_first6": hs["runs_first6"], "away_runs_first6": as_["runs_first6"],
                     "home_runs_late": hs["runs_late"], "away_runs_late": as_["runs_late"],
                     "innings_played": hs["innings"],
+                    "hp_umpire_id": hp.get("official", {}).get("id"),
+                    "hp_umpire": hp.get("official", {}).get("fullName"),
+                    "temp_f": temp_f, "wind_mph": wind_mph, "wind_dir": wind_dir,
+                    "condition": wx.get("condition"),
                 })
     df = pd.DataFrame(rows)
     # Team abbreviations / divisions are only hydrated on some seasons; fill
