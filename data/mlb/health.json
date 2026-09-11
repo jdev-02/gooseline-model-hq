@@ -1,5 +1,5 @@
 {
-  "run_ts": "2026-09-11T17:48:44+00:00",
+  "run_ts": "2026-09-11T17:57:11+00:00",
   "slate_date": "2026-09-11",
   "ok": true,
   "hard_failures": [],
@@ -11,7 +11,7 @@
       "name": "schedule refreshed",
       "ok": true,
       "hard": true,
-      "detail": "2026.json.gz 6 min old",
+      "detail": "2026.json.gz 2 min old",
       "stage": "data"
     },
     {
@@ -46,7 +46,7 @@
       "name": "rundown ran this run",
       "ok": true,
       "hard": true,
-      "detail": "latest row 119 min old",
+      "detail": "latest row 0 min old",
       "stage": "data"
     },
     {
@@ -102,7 +102,7 @@
       "name": "kalshi-snapshot alive",
       "ok": true,
       "hard": false,
-      "detail": "last snapshot 6 min ago",
+      "detail": "last snapshot 15 min ago",
       "stage": "data"
     },
     {
@@ -123,7 +123,7 @@
       "name": "site rebuilt this run",
       "ok": true,
       "hard": true,
-      "detail": "0 min old, 523 KB",
+      "detail": "0 min old, 522 KB",
       "stage": "site"
     },
     {
