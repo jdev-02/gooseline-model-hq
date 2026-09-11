@@ -208,7 +208,7 @@ def stage_site(rep, today):
         shown = [f"{r.away} @ {r.home}" for r in up.itertuples() if f"{r.away} @ {r.home}" in html]
         rep.add("site shows every upcoming game", len(shown) == len(up),
                 f"{len(shown)}/{len(up)} matchups found in docs/index.html")
-    rep.add("site has a freshness strip", 'class="health"' in html, "health strip rendered", hard=False)
+    rep.add("site has a freshness strip", 'class="health ' in html, "health strip rendered", hard=False)
 
 
 def main():
