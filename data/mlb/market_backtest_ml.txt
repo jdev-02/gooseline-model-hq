@@ -1,22 +1,22 @@
-MLB, 186 priced+settled games, 2026-08-27 -> 2026-09-11
+MLB, 189 priced+settled games, 2026-08-27 -> 2026-09-12
 
 Brier (lower is better):
-  Kalshi alone (a=0):   0.2370
-  model alone  (a=1):   0.2446
+  Kalshi alone (a=0):   0.2371
+  model alone  (a=1):   0.2442
   coin flip:            0.2500
 
 Blend a*model + (1-a)*Kalshi:
-  a=0.00  brier=0.2370
+  a=0.00  brier=0.2371
   a=0.25  brier=0.2383
-  a=0.50  brier=0.2400
-  a=0.75  brier=0.2421
-  a=1.00  brier=0.2446
+  a=0.50  brier=0.2399
+  a=0.75  brier=0.2418
+  a=1.00  brier=0.2442
   best a = 0.00
 
-Honest split: choose a on first half (87 games) -> a*=0.00; test on second half (99 games): Kalshi 0.2295 vs blend 0.2295 -> Kalshi better
+Honest split: choose a on first half (103 games) -> a*=0.00; test on second half (86 games): Kalshi 0.2322 vs blend 0.2322 -> Kalshi better
 
 Paper trade vs live Kalshi ask, after 7% fee, $15 flat:
-  edge >= 0%                 bets  137  win  39.4%  P&L  -291.82  ROI  -14.2%
+  edge >= 0%                 bets  138  win  39.9%  P&L  -279.91  ROI  -13.5%
   edge >= 2%                 bets   98  win  37.8%  P&L  -224.77  ROI  -15.3%
   edge >= 4%                 bets   49  win  32.7%  P&L  -184.93  ROI  -25.2%
   edge >= 6%                 bets   24  win  25.0%  P&L  -144.06  ROI  -40.0%
@@ -27,9 +27,9 @@ Paper trade vs live Kalshi ask, after 7% fee, $15 flat:
 Calibration by KALSHI probability bucket:
   Kalshi (0.0, 0.35]   n=  2  home won  50.0%   Kalshi said  33.2%   model said  37.9%
   Kalshi (0.35, 0.45]  n= 29  home won  44.8%   Kalshi said  40.8%   model said  41.4%
-  Kalshi (0.45, 0.55]  n= 78  home won  44.9%   Kalshi said  50.3%   model said  48.2%
-  Kalshi (0.55, 0.65]  n= 57  home won  63.2%   Kalshi said  60.1%   model said  55.3%
+  Kalshi (0.45, 0.55]  n= 79  home won  45.6%   Kalshi said  50.4%   model said  48.3%
+  Kalshi (0.55, 0.65]  n= 59  home won  62.7%   Kalshi said  60.1%   model said  55.5%
   Kalshi (0.65, 1.0]   n= 20  home won  70.0%   Kalshi said  68.8%   model said  61.5%
 
-TOTALS (over 8.5), 105 games:
-  Brier Kalshi 0.2422   model 0.2401   best blend a=0.90
+TOTALS (over 8.5), 108 games:
+  Brier Kalshi 0.2438   model 0.2403   best blend a=1.00

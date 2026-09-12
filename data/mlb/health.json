@@ -1,11 +1,9 @@
 {
-  "run_ts": "2026-09-12T18:44:18+00:00",
+  "run_ts": "2026-09-12T21:48:11+00:00",
   "slate_date": "2026-09-12",
   "ok": true,
   "hard_failures": [],
-  "warnings": [
-    "kalshi-snapshot alive"
-  ],
+  "warnings": [],
   "checks": [
     {
       "name": "schedule refreshed",
@@ -18,7 +16,7 @@
       "name": "schedule has today",
       "ok": true,
       "hard": true,
-      "detail": "15 games today, 12 still to play",
+      "detail": "15 games today, 6 still to play",
       "stage": "data"
     },
     {
@@ -53,7 +51,7 @@
       "name": "every upcoming game priced",
       "ok": true,
       "hard": true,
-      "detail": "12/12",
+      "detail": "6/6",
       "stage": "data"
     },
     {
@@ -95,14 +93,14 @@
       "name": "probable pitchers known",
       "ok": true,
       "hard": false,
-      "detail": "14/15 games have both starters",
+      "detail": "15/15 games have both starters",
       "stage": "data"
     },
     {
       "name": "kalshi-snapshot alive",
-      "ok": false,
+      "ok": true,
       "hard": false,
-      "detail": "last snapshot 109 min ago",
+      "detail": "last snapshot 11 min ago",
       "stage": "data"
     },
     {
@@ -123,7 +121,7 @@
       "name": "site rebuilt this run",
       "ok": true,
       "hard": true,
-      "detail": "0 min old, 533 KB",
+      "detail": "0 min old, 523 KB",
       "stage": "site"
     },
     {
@@ -137,7 +135,7 @@
       "name": "site shows every upcoming game",
       "ok": true,
       "hard": true,
-      "detail": "12/12 matchups found in docs/index.html",
+      "detail": "6/6 matchups found in docs/index.html",
       "stage": "site"
     },
     {
