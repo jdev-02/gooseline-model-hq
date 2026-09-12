@@ -1,9 +1,11 @@
 {
-  "run_ts": "2026-09-11T22:07:09+00:00",
-  "slate_date": "2026-09-11",
+  "run_ts": "2026-09-12T06:53:12+00:00",
+  "slate_date": "2026-09-12",
   "ok": true,
   "hard_failures": [],
-  "warnings": [],
+  "warnings": [
+    "kalshi-snapshot alive"
+  ],
   "checks": [
     {
       "name": "schedule refreshed",
@@ -16,7 +18,7 @@
       "name": "schedule has today",
       "ok": true,
       "hard": true,
-      "detail": "15 games today, 14 still to play",
+      "detail": "15 games today, 15 still to play",
       "stage": "data"
     },
     {
@@ -30,7 +32,7 @@
       "name": "yesterday settled in games.csv",
       "ok": true,
       "hard": true,
-      "detail": "5/5 finals carry scores",
+      "detail": "15/15 finals carry scores",
       "stage": "data"
     },
     {
@@ -51,7 +53,7 @@
       "name": "every upcoming game priced",
       "ok": true,
       "hard": true,
-      "detail": "14/14",
+      "detail": "15/15",
       "stage": "data"
     },
     {
@@ -93,14 +95,14 @@
       "name": "probable pitchers known",
       "ok": true,
       "hard": false,
-      "detail": "14/15 games have both starters",
+      "detail": "13/15 games have both starters",
       "stage": "data"
     },
     {
       "name": "kalshi-snapshot alive",
-      "ok": true,
+      "ok": false,
       "hard": false,
-      "detail": "last snapshot 79 min ago",
+      "detail": "last snapshot 228 min ago",
       "stage": "data"
     },
     {
@@ -121,21 +123,21 @@
       "name": "site rebuilt this run",
       "ok": true,
       "hard": true,
-      "detail": "0 min old, 520 KB",
+      "detail": "0 min old, 538 KB",
       "stage": "site"
     },
     {
       "name": "site dated today",
       "ok": true,
       "hard": true,
-      "detail": "looked for 'generated 2026-09-11'",
+      "detail": "looked for 'generated 2026-09-12'",
       "stage": "site"
     },
     {
       "name": "site shows every upcoming game",
       "ok": true,
       "hard": true,
-      "detail": "14/14 matchups found in docs/index.html",
+      "detail": "15/15 matchups found in docs/index.html",
       "stage": "site"
     },
     {
