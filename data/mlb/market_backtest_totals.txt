@@ -1,39 +1,39 @@
 
-=== O/U 7.5: 120 games ===
-  Brier  Kalshi 0.2356   model 0.2329   MODEL better   (overs hit 57%, Kalshi said 56%, model 56%)
-  edge >= 0%                   bets  83  win  51.8%  P&L   110.46  ROI    8.9%
+=== O/U 7.5: 121 games ===
+  Brier  Kalshi 0.2349   model 0.2321   MODEL better   (overs hit 58%, Kalshi said 56%, model 56%)
+  edge >= 0%                   bets  84  win  52.4%  P&L   119.40  ROI    9.5%
   edge >= 2%                   bets  59  win  52.5%  P&L   110.64  ROI   12.5%
   edge >= 4%                   bets  35  win  54.3%  P&L    87.00  ROI   16.6%
   edge >= 6%                   bets  12  win  41.7%  P&L   -10.16  ROI   -5.6%
   split by date at 2026-09-08:
       first half (55 g), >=4%  bets  20  win  60.0%  P&L    87.83  ROI   29.3%
-      second half (65 g), >=4% bets  15  win  46.7%  P&L    -0.83  ROI   -0.4%
-    Brier first half: Kalshi 0.2373 model 0.2296   second half: Kalshi 0.2341 model 0.2356
-  model says OVER: n=59, over actually hit 58%, Kalshi said 52%, model 56%
+      second half (66 g), >=4% bets  15  win  46.7%  P&L    -0.83  ROI   -0.4%
+    Brier first half: Kalshi 0.2373 model 0.2296   second half: Kalshi 0.2329 model 0.2341
+  model says OVER: n=60, over actually hit 58%, Kalshi said 52%, model 57%
   model says UNDER: n=61, over actually hit 57%, Kalshi said 60%, model 56%
 
-=== O/U 8.5: 120 games ===
-  Brier  Kalshi 0.2432   model 0.2419   MODEL better   (overs hit 50%, Kalshi said 48%, model 47%)
+=== O/U 8.5: 121 games ===
+  Brier  Kalshi 0.2430   model 0.2417   MODEL better   (overs hit 50%, Kalshi said 48%, model 47%)
   edge >= 0%                   bets  88  win  48.9%  P&L    24.44  ROI    1.9%
   edge >= 2%                   bets  59  win  52.5%  P&L   123.57  ROI   14.0%
   edge >= 4%                   bets  33  win  45.5%  P&L    23.15  ROI    4.7%
   edge >= 6%                   bets  16  win  62.5%  P&L    96.91  ROI   40.4%
   split by date at 2026-09-08:
       first half (55 g), >=4%  bets  20  win  45.0%  P&L    11.71  ROI    3.9%
-      second half (65 g), >=4% bets  13  win  46.2%  P&L    11.44  ROI    5.9%
-    Brier first half: Kalshi 0.2363 model 0.2270   second half: Kalshi 0.2491 model 0.2546
-  model says OVER: n=44, over actually hit 45%, Kalshi said 43%, model 47%
+      second half (66 g), >=4% bets  13  win  46.2%  P&L    11.44  ROI    5.9%
+    Brier first half: Kalshi 0.2363 model 0.2270   second half: Kalshi 0.2487 model 0.2540
+  model says OVER: n=45, over actually hit 47%, Kalshi said 43%, model 47%
   model says UNDER: n=76, over actually hit 53%, Kalshi said 51%, model 47%
 
-=== O/U 9.5: 120 games ===
-  Brier  Kalshi 0.2386   model 0.2394   Kalshi better   (overs hit 44%, Kalshi said 38%, model 38%)
+=== O/U 9.5: 121 games ===
+  Brier  Kalshi 0.2381   model 0.2391   Kalshi better   (overs hit 44%, Kalshi said 38%, model 38%)
   edge >= 0%                   bets  82  win  45.1%  P&L    -9.54  ROI   -0.8%
   edge >= 2%                   bets  57  win  45.6%  P&L    43.38  ROI    5.1%
   edge >= 4%                   bets  32  win  50.0%  P&L    81.52  ROI   17.0%
   edge >= 6%                   bets   8  win  12.5%  P&L   -90.44  ROI  -75.4%
   split by date at 2026-09-08:
       first half (55 g), >=4%  bets  17  win  58.8%  P&L   105.78  ROI   41.5%
-      second half (65 g), >=4% bets  15  win  40.0%  P&L   -24.26  ROI  -10.8%
-    Brier first half: Kalshi 0.2144 model 0.2137   second half: Kalshi 0.2590 model 0.2612
-  model says OVER: n=60, over actually hit 42%, Kalshi said 35%, model 38%
+      second half (66 g), >=4% bets  15  win  40.0%  P&L   -24.26  ROI  -10.8%
+    Brier first half: Kalshi 0.2144 model 0.2137   second half: Kalshi 0.2579 model 0.2603
+  model says OVER: n=61, over actually hit 41%, Kalshi said 35%, model 39%
   model says UNDER: n=60, over actually hit 47%, Kalshi said 41%, model 38%

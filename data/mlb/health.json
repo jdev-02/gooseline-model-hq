@@ -1,9 +1,11 @@
 {
-  "run_ts": "2026-09-13T18:01:16+00:00",
+  "run_ts": "2026-09-13T18:59:22+00:00",
   "slate_date": "2026-09-13",
   "ok": true,
   "hard_failures": [],
-  "warnings": [],
+  "warnings": [
+    "kalshi-snapshot alive"
+  ],
   "checks": [
     {
       "name": "schedule refreshed",
@@ -16,7 +18,7 @@
       "name": "schedule has today",
       "ok": true,
       "hard": true,
-      "detail": "15 games today, 8 still to play",
+      "detail": "15 games today, 4 still to play",
       "stage": "data"
     },
     {
@@ -51,7 +53,7 @@
       "name": "every upcoming game priced",
       "ok": true,
       "hard": true,
-      "detail": "8/8",
+      "detail": "4/4",
       "stage": "data"
     },
     {
@@ -98,9 +100,9 @@
     },
     {
       "name": "kalshi-snapshot alive",
-      "ok": true,
+      "ok": false,
       "hard": false,
-      "detail": "last snapshot 38 min ago",
+      "detail": "last snapshot 95 min ago",
       "stage": "data"
     },
     {
@@ -121,7 +123,7 @@
       "name": "site rebuilt this run",
       "ok": true,
       "hard": true,
-      "detail": "0 min old, 528 KB",
+      "detail": "0 min old, 519 KB",
       "stage": "site"
     },
     {
@@ -135,7 +137,7 @@
       "name": "site shows every upcoming game",
       "ok": true,
       "hard": true,
-      "detail": "8/8 matchups found in docs/index.html",
+      "detail": "4/4 matchups found in docs/index.html",
       "stage": "site"
     },
     {
