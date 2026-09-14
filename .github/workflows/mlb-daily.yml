@@ -91,7 +91,12 @@ jobs:
         run: |
           git config user.name "model-hq-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add docs/index.html
+          # health.json too: the site-stage check (previous step) appends to
+          # the same file "commit data" already pushed with only the
+          # data-stage checks, leaving it dirty here. Reproduced locally:
+          # missing this was the second cause of the 2026-09-14 CI failures,
+          # after the docs/index.html conflict this split was meant to fix.
+          git add docs/index.html data/mlb/health.json
           git diff --cached --quiet && exit 0
           git commit -m "site(mlb): rebuild $(date -u +%Y-%m-%dT%H:%MZ)"
           for i in 1 2 3; do
