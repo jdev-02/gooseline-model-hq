@@ -1,5 +1,5 @@
 {
-  "run_ts": "2026-09-14T14:47:53+00:00",
+  "run_ts": "2026-09-14T14:57:57+00:00",
   "slate_date": "2026-09-14",
   "ok": true,
   "hard_failures": [],
@@ -102,7 +102,7 @@
       "name": "kalshi-snapshot alive",
       "ok": false,
       "hard": false,
-      "detail": "last snapshot 338 min ago",
+      "detail": "last snapshot 348 min ago",
       "stage": "data"
     },
     {
