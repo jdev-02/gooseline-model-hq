@@ -56,17 +56,34 @@ jobs:
         run: uv run python src/nfl/prep_pbp.py --refresh-latest --games data/nfl/games.csv --cache data/nfl/team_game_stats.csv
       - name: rundown
         run: uv run python -m src.nfl.rundown --days 8
+      - name: health gate (data)
+        # 2026-09-13: a delayed cron ran mid-game and priced eight games
+        # against a live, in-progress Kalshi market. Both pricing paths now
+        # filter by kickoff time; this independently re-derives kickoff for
+        # every priced row and fails if one slipped through anyway.
+        id: health_data
+        continue-on-error: true
+        run: uv run python ops/healthcheck_nfl.py --stage data
       - name: settle and score
         continue-on-error: true
         run: uv run python ops/paper_trade.py --sport nfl --stake 15 --min-edge 0.04
       - name: rebuild the site
         run: uv run python -m src.site.build
+      - name: health gate (site)
+        id: health_site
+        continue-on-error: true
+        run: uv run python ops/healthcheck_nfl.py --stage site
       - name: commit
         run: |
           git config user.name "model-hq-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/nfl/games.csv data/nfl/team_game_stats.csv data/nfl/rundown_log.csv docs/index.html || true
+          git add data/nfl/games.csv data/nfl/team_game_stats.csv data/nfl/rundown_log.csv data/nfl/health.json docs/index.html || true
           git diff --cached --quiet && exit 0
-          git commit -m "data(nfl): daily rundown $(date -u +%Y-%m-%d)"
+          git commit -m "data(nfl): daily rundown $(date -u +%Y-%m-%dT%H:%MZ)"
           git pull --rebase origin main
           git push origin HEAD:main
+      - name: fail if unhealthy
+        if: steps.health_data.outcome == 'failure' || steps.health_site.outcome == 'failure'
+        run: |
+          jq -r '.hard_failures[]' data/nfl/health.json | sed 's/^/HARD FAIL: /'
+          exit 1

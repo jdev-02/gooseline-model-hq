@@ -436,6 +436,44 @@ def game_card(r):
             f'<div class="call">{call}</div><div class="gline">{gline}</div>'
             f'<div class="bars">{model_bar}{mkt_bar}</div>{gaptxt}{spread_row}{note}'
             f'{verdict_badge(v)}</div>')
+def health_strip(today, health_path="data/nfl/health.json"):
+    """Same purpose as the MLB page's strip (src/site/mlb_page.py): the run's
+    own audit, above the first card, so a reader can trust a number before
+    reading it. Built from data/nfl/health.json (ops/healthcheck_nfl.py)."""
+    import json
+    from pathlib import Path
+    p = Path(health_path)
+    health = json.loads(p.read_text()) if p.exists() else None
+    if health and health.get("run_date") != str(today.date()):
+        health = None  # a stale record is worse than none
+    if not health:
+        return ('<div class="health warn">No health record for this build. '
+                'Treat every number below as unverified.</div>')
+    checks = [c for c in health.get("checks", []) if c.get("stage") == "data"]
+    fails = [c for c in checks if not c["ok"] and c["hard"]]
+    warns = [c for c in checks if not c["ok"] and not c["hard"]]
+    ts = pd.Timestamp(health.get("run_ts")).strftime("%Y-%m-%d %H:%M UTC")
+    by = {c["ok"] for c in checks if c["name"] == "no game priced past its own kickoff"}
+    fresh = next((c["detail"] for c in checks if c["name"] == "Kalshi prices fresh"), "")
+    facts = " &middot; ".join(x for x in (
+        f"run {ts}",
+        "kickoff check clean" if by == {True} else ("kickoff check FAILED -- see below" if by else ""),
+        fresh,
+    ) if x)
+    if fails:
+        cls, head = "fail", f"{len(fails)} check{'s' if len(fails) > 1 else ''} FAILED: " + ", ".join(c["name"] for c in fails)
+    elif warns:
+        cls, head = "warn", f"all hard checks passed; {len(warns)} warning{'s' if len(warns) > 1 else ''}: " + ", ".join(c["name"] for c in warns)
+    else:
+        cls, head = "ok", f"all {len(checks)} checks passed"
+    rows = "".join(
+        f'<li class="{"ok" if c["ok"] else ("fail" if c["hard"] else "warn")}">'
+        f'{c["name"]}: {c["detail"]}</li>' for c in checks)
+    return (f'<div class="health {cls}"><b>Run health:</b> {head}<br>'
+            f'<span class="facts">{facts}</span>'
+            f'<details><summary>every check</summary><ul>{rows}</ul></details></div>')
+
+
 def build_site(out_path="site.html", games_path="data/nfl/games.csv",
                stats_path="data/nfl/team_game_stats.csv", db_path="data/kalshi_prices.db",
                horizon_days=8, edge_threshold=0.04):
@@ -444,7 +482,26 @@ def build_site(out_path="site.html", games_path="data/nfl/games.csv",
 
     today = pd.Timestamp.today().normalize()
     future = df[df["result"].isna() & (df["gameday"] >= today)]
-    upcoming = future[future["gameday"] <= today + pd.Timedelta(days=horizon_days)]
+    window = future[future["gameday"] <= today + pd.Timedelta(days=horizon_days)]
+    # Same bug as src/nfl/rundown.py, independently: this path builds the
+    # site's own cards from result.isna() and a date window, with no check
+    # for whether a game has actually kicked off. On 2026-09-13 that priced
+    # eight games against a live, in-progress Kalshi market at rebuild time.
+    # This is the path a viewer actually reads on the site, so it gets the
+    # identical guard.
+    now_et = pd.Timestamp.now(tz="America/New_York")
+    kickoff = pd.to_datetime(
+        window["gameday"].dt.strftime("%Y-%m-%d") + " " + window["gametime"].fillna("13:00"),
+        errors="coerce",
+    ).dt.tz_localize("America/New_York", ambiguous="NaT", nonexistent="NaT")
+    started = kickoff.notna() & (kickoff <= now_et)
+    excluded_live = window.loc[started, ["gameday", "away_team", "home_team", "gametime"]]
+    if len(excluded_live):
+        import sys
+        print(f"build_site: excluding {len(excluded_live)} game(s) already past kickoff: "
+              + "; ".join(f"{r.away_team}@{r.home_team} {r.gametime}ET"
+                          for r in excluded_live.itertuples()), file=sys.stderr)
+    upcoming = window[~started]
     week_note = ""
     if len(upcoming) == 0 and len(future):
         first = future["gameday"].min()
@@ -569,6 +626,7 @@ def build_site(out_path="site.html", games_path="data/nfl/games.csv",
 <div class="wrap">
 <h1>NFL <span>Model</span> HQ</h1>
 <p class="sub">A Bayesian margin model &middot; generated {today.date()}</p>
+{health_strip(today)}
 
 <div id="week" class="panel on">
 <h2>This Week</h2>

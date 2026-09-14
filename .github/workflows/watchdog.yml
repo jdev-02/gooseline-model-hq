@@ -72,21 +72,25 @@ jobs:
             fi
           fi
 
-          # The committed health gate from the last mlb-daily.
-          if [ -f data/mlb/health.json ]; then
-            hok=$(jq -r '.ok' data/mlb/health.json)
-            hdate=$(jq -r '.slate_date' data/mlb/health.json)
-            hfail=$(jq -r '.hard_failures | join(", ")' data/mlb/health.json)
-            if [ "$hdate" != "$today" ]; then
-              problems+=("health.json is for $hdate, not $today")
-            elif [ "$hok" != "true" ]; then
-              problems+=("health gate failed: $hfail")
+          # The committed health gate from the last mlb-daily and nfl-daily.
+          check_health () {  # $1 = path, $2 = date field name, $3 = label
+            if [ -f "$1" ]; then
+              hok=$(jq -r '.ok' "$1")
+              hdate=$(jq -r ".$2" "$1")
+              hfail=$(jq -r '.hard_failures | join(", ")' "$1")
+              if [ "$hdate" != "$today" ]; then
+                problems+=("$3 health.json is for $hdate, not $today")
+              elif [ "$hok" != "true" ]; then
+                problems+=("$3 health gate failed: $hfail")
+              else
+                notes+=("$3 health gate ok for $today")
+              fi
             else
-              notes+=("health gate ok for $today")
+              problems+=("$1 missing")
             fi
-          else
-            problems+=("data/mlb/health.json missing")
-          fi
+          }
+          check_health data/mlb/health.json slate_date MLB
+          check_health data/nfl/health.json run_date NFL
 
           {
             echo "problems<<EOF"; printf '%s\n' "${problems[@]:-}"; echo "EOF"
