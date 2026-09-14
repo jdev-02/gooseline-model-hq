@@ -1,6 +1,6 @@
 {
-  "run_ts": "2026-09-13T21:53:30+00:00",
-  "slate_date": "2026-09-13",
+  "run_ts": "2026-09-14T07:35:19+00:00",
+  "slate_date": "2026-09-14",
   "ok": true,
   "hard_failures": [],
   "warnings": [
@@ -18,14 +18,14 @@
       "name": "schedule has today",
       "ok": true,
       "hard": true,
-      "detail": "15 games today, 1 still to play",
+      "detail": "10 games today, 10 still to play",
       "stage": "data"
     },
     {
       "name": "games.csv complete for today",
       "ok": true,
       "hard": true,
-      "detail": "15/15 present",
+      "detail": "10/10 present",
       "stage": "data"
     },
     {
@@ -53,56 +53,56 @@
       "name": "every upcoming game priced",
       "ok": true,
       "hard": true,
-      "detail": "1/1",
+      "detail": "10/10",
       "stage": "data"
     },
     {
       "name": "moneyline probabilities finite",
       "ok": true,
       "hard": true,
-      "detail": "15/15",
+      "detail": "10/10",
       "stage": "data"
     },
     {
       "name": "totals priced",
       "ok": true,
       "hard": true,
-      "detail": "15/15",
+      "detail": "10/10",
       "stage": "data"
     },
     {
       "name": "weather at every open-roof game",
       "ok": true,
       "hard": true,
-      "detail": "15/15 have a temperature or a closed roof",
+      "detail": "10/10 have a temperature or a closed roof",
       "stage": "data"
     },
     {
       "name": "Kalshi prices present",
       "ok": true,
       "hard": false,
-      "detail": "15/15 games have a moneyline price",
+      "detail": "10/10 games have a moneyline price",
       "stage": "data"
     },
     {
       "name": "Kalshi prices fresh",
       "ok": true,
       "hard": false,
-      "detail": "15/15 priced games under 20 min",
+      "detail": "10/10 priced games under 20 min",
       "stage": "data"
     },
     {
       "name": "probable pitchers known",
       "ok": true,
       "hard": false,
-      "detail": "15/15 games have both starters",
+      "detail": "10/10 games have both starters",
       "stage": "data"
     },
     {
       "name": "kalshi-snapshot alive",
       "ok": false,
       "hard": false,
-      "detail": "last snapshot 131 min ago",
+      "detail": "last snapshot 256 min ago",
       "stage": "data"
     },
     {
@@ -123,21 +123,21 @@
       "name": "site rebuilt this run",
       "ok": true,
       "hard": true,
-      "detail": "0 min old, 509 KB",
+      "detail": "0 min old, 516 KB",
       "stage": "site"
     },
     {
       "name": "site dated today",
       "ok": true,
       "hard": true,
-      "detail": "looked for 'generated 2026-09-13'",
+      "detail": "looked for 'generated 2026-09-14'",
       "stage": "site"
     },
     {
       "name": "site shows every upcoming game",
       "ok": true,
       "hard": true,
-      "detail": "1/1 matchups found in docs/index.html",
+      "detail": "10/10 matchups found in docs/index.html",
       "stage": "site"
     },
     {
