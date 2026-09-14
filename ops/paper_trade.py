@@ -33,9 +33,11 @@ args = ap.parse_args()
 if args.sport == "nfl":
     log_path = Path("data/nfl/rundown_log.csv")
     games_path = Path("data/nfl/games.csv")
+    out_path = Path("data/nfl/paper_trades.csv")
 else:
     log_path = DATA / "narrative" / "log.csv"
     games_path = DATA / "games.csv"
+    out_path = DATA / "paper_trades.csv"
 
 if not log_path.exists():
     print(f"no {args.sport} rundown log yet")
@@ -134,7 +136,7 @@ else:
 t["contracts"] = t["stake"] / t["cost_per_contract"]
 t["pnl"] = np.where(t["won"], t["contracts"] * 1.0 - t["stake"], -t["stake"]).round(2)
 t["cum_pnl"] = t["pnl"].cumsum().round(2)
-t.to_csv(DATA / "paper_trades.csv", index=False)
+t.to_csv(out_path, index=False)
 
 n, w = len(t), int(t["won"].sum())
 staked, pnl = t["stake"].sum(), t["pnl"].sum()
