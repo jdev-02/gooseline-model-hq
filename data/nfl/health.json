@@ -1,5 +1,5 @@
 {
-  "run_ts": "2026-09-14T14:51:26+00:00",
+  "run_ts": "2026-09-14T15:00:20+00:00",
   "run_date": "2026-09-14",
   "ok": true,
   "hard_failures": [],
@@ -81,7 +81,7 @@
       "name": "kalshi-snapshot alive (NFL series)",
       "ok": false,
       "hard": false,
-      "detail": "last snapshot 342 min ago",
+      "detail": "last snapshot 350 min ago",
       "stage": "data"
     }
   ]
