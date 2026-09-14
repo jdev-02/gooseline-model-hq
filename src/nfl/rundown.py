@@ -3,6 +3,7 @@ import argparse
 import os
 import re
 import sqlite3
+import sys
 import numpy as np
 import pandas as pd
 
@@ -253,9 +254,31 @@ def rundown(games_path="data/nfl/games.csv", stats_path="data/nfl/team_game_stat
             log_path="data/nfl/rundown_log.csv"):
     df = build_frame(games_path, stats_path)
     today = pd.Timestamp.today().normalize()
-    upcoming = df[df["result"].isna()
-                  & (df["gameday"] >= today)
-                  & (df["gameday"] <= today + pd.Timedelta(days=horizon_days))]
+    window = df[df["result"].isna()
+                & (df["gameday"] >= today)
+                & (df["gameday"] <= today + pd.Timedelta(days=horizon_days))]
+
+    # `result` is only filled once nflverse posts a final score, sometimes
+    # hours after the game ends, so it does not tell us a game has *started*.
+    # On 2026-09-13 a run at 14:34 ET priced all eight 13:00 ET games against
+    # live, already-in-progress Kalshi prices while comparing them to a
+    # static pregame model number -- three read as 30-40% "edges", which is
+    # not a real market inefficiency, it is the model not knowing the score.
+    # gametime is Eastern local (nflverse convention); kickoff has passed
+    # once now (in ET) is at or past gameday + gametime.
+    now_et = pd.Timestamp.now(tz="America/New_York")
+    kickoff = pd.to_datetime(
+        window["gameday"].dt.strftime("%Y-%m-%d") + " " + window["gametime"].fillna("13:00"),
+        errors="coerce",
+    ).dt.tz_localize("America/New_York", ambiguous="NaT", nonexistent="NaT")
+    started = kickoff.notna() & (kickoff <= now_et)
+    if started.any():
+        live = window.loc[started, ["gameday", "away_team", "home_team", "gametime"]]
+        print(f"rundown: excluding {len(live)} game(s) already past kickoff "
+              f"(would price a pregame model against a live market): "
+              + "; ".join(f"{r.away_team}@{r.home_team} {r.gametime}ET"
+                          for r in live.itertuples()), file=sys.stderr)
+    upcoming = window[~started]
     if len(upcoming) == 0:
         print("No games in the horizon window.")
         return None
@@ -305,8 +328,15 @@ def rundown(games_path="data/nfl/games.csv", stats_path="data/nfl/team_game_stat
             if age is None and price_source != "live":
                 from src.core.kalshi import latest_snapshot_ts
                 ts = latest_snapshot_ts(db_path)
-                age = ((now - pd.Timestamp(ts).tz_localize("UTC")).total_seconds() / 60.0
-                       if ts else None)
+                if ts:
+                    # Same fix as src/mlb/rundown.py: a snapshot timestamp
+                    # may already carry an offset, and tz_localize on a
+                    # tz-aware value raises instead of no-op'ing.
+                    t = pd.Timestamp(ts)
+                    t = t.tz_localize("UTC") if t.tzinfo is None else t.tz_convert("UTC")
+                    age = (now - t).total_seconds() / 60.0
+                else:
+                    age = None
             rec["price_age_min"] = None if age is None else round(age, 1)
             stale = age is not None and age > STALE_MINUTES
             if stale:
