@@ -177,6 +177,15 @@ nav button.on:hover{color:#08120b}
 .gap b{font-variant-numeric:tabular-nums}
 .verdict{display:inline-block;margin-top:7px;padding:2px 10px;border-radius:99px;
   font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+/* The lead badge sits right under the matchup header now, not last after a
+   wall of prose -- it's the one thing every card must answer at a glance,
+   so it gets its own size step instead of sharing the small inline badges'. */
+.leadv{margin:6px 0 2px}
+.leadv .verdict{font-size:.8rem;padding:4px 13px}
+.why{margin-top:6px}
+.why summary{cursor:pointer;color:var(--green);font-size:.72rem;
+  text-transform:uppercase;letter-spacing:.04em}
+.why[open] summary{margin-bottom:2px}
 .v-high{background:var(--green);color:#08120b}
 .v-caut{background:var(--yellow);color:#141005}
 .v-avoid{background:none;border:1px solid var(--red);color:var(--red)}
@@ -353,14 +362,11 @@ def game_card(r):
     call += f" &plusmn;{sigma:.0f}"
     fav0 = r["home"] if pm >= 0.5 else r["away"]
     fav_p = pm if pm >= 0.5 else 1 - pm
+    # No "or for value" clause here: when the flagged side differs from the
+    # model's favorite, the collapsed "Why" section below says so once. This
+    # used to say it twice, in two different phrasings, on the same card.
     gline = (f'Gambler terms: <b>{fav_line(mu, r["home"], r["away"])}</b> &middot; '
              f'{fav0} ML <b>{american(fav_p)}</b>')
-    v0 = str(r.get("verdict", ""))
-    if "&mdash;" in v0 and (v0.startswith("HIGH VALUE") or v0.startswith("CAUTIOUS")):
-        vside = v0.split("&mdash;")[-1].strip().replace("small edge on ", "")
-        if vside != fav0:
-            gline += (f' &middot; or for value: <b>{vside} ML '
-                      f'{american(1 - fav_p)}</b> (why below)')
     model_bar = (f'<div class="brow"><span class="blab">Bayesian model</span>'
                  f'<div class="btrack"><div class="bfill model" '
                  f'style="width:{pm*100:.1f}%"></div></div>'
@@ -414,6 +420,10 @@ def game_card(r):
                         f'fees. No bet.')
         if note:
             note = f'<div class="gap">{note}</div>'
+    # Spread, backtested at 49.2% against a 52.4% breakeven across five
+    # seasons -- dead, per docs/baselines.md -- so this never gets the
+    # "hit"/green styling the moneyline verdict uses: that styling means
+    # "this beat the market in testing," and the spread hasn't.
     spread_row = ""
     sl = r.get("spread_line")
     if sl is not None and not pd.isna(sl):
@@ -421,21 +431,26 @@ def game_card(r):
         side, p = ((r["home"], p_ch) if p_ch >= 0.5 else (r["away"], 1 - p_ch))
         line = (f"-{abs(sl):g}" if (side == r["home"]) == (sl > 0)
                 else f"+{abs(sl):g}")
-        if p >= 0.58:
-            tag = '<span class="hit">value at a book\'s -110</span>'
-        elif p >= 0.545:
-            tag = '<span style="color:var(--yellow)">slight lean at -110</span>'
-        else:
-            tag = 'no edge at -110'
         spread_row = (f'<div class="gap">Spread (Vegas: '
                       f'{fav_line(sl, r["home"], r["away"])}): model covers '
                       f'<b>{side} {line}</b> {p*100:.0f}% of the time &middot; '
-                      f'fair price {american(p)} &middot; {tag}</div>')
+                      f'fair price {american(p)} &middot; '
+                      f'<span style="opacity:.7">not backtested as a bet '
+                      f'(five-season record: 49.2% vs. a 52.4% breakeven) -- '
+                      f'reference only</span></div>')
+    # The badge answers "what do I do" -- it used to sit last, after several
+    # lines of prose. It's first now, right under the matchup. The reasoning
+    # behind it and the spread (not a backtested bet) are real information,
+    # not clutter, so they stay on the card -- just collapsed, the same
+    # pattern the run-health strip uses.
+    why = "".join(x for x in (note, spread_row) if x)
+    why_block = (f'<details class="why"><summary>Why{" &middot; spread" if spread_row else ""}</summary>'
+                 f'{why}</details>' if why else "")
     return (f'<div class="card"><div class="match"><span class="teams">{r["away"]} @ '
             f'{r["home"]}</span><span class="date">{r["date"]}</span></div>'
+            f'<div class="leadv">{verdict_badge(v)}</div>'
             f'<div class="call">{call}</div><div class="gline">{gline}</div>'
-            f'<div class="bars">{model_bar}{mkt_bar}</div>{gaptxt}{spread_row}{note}'
-            f'{verdict_badge(v)}</div>')
+            f'<div class="bars">{model_bar}{mkt_bar}</div>{gaptxt}{why_block}</div>')
 def health_strip(today, health_path="data/nfl/health.json"):
     """Same purpose as the MLB page's strip (src/site/mlb_page.py): the run's
     own audit, above the first card, so a reader can trust a number before

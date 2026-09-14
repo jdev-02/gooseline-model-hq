@@ -67,14 +67,11 @@ def game_card(r):
     call += f" &plusmn;{sg:.1f}"
     fav0 = r["home"] if pm >= 0.5 else r["away"]
     fav_p = pm if pm >= 0.5 else 1 - pm
+    # No "or for value" clause here: when the flagged side differs from the
+    # model's favorite, the collapsed "Why" section below says so once. This
+    # used to say it twice, in two different phrasings, on the same card.
     gline = (f'Gambler terms: <b>{fav_line(mu, r["home"], r["away"])}</b> &middot; '
              f'{fav0} ML <b>{american(fav_p)}</b>')
-    v0 = str(r.get("verdict", ""))
-    if "&mdash;" in v0 and (v0.startswith("HIGH VALUE") or v0.startswith("CAUTIOUS")):
-        vside = v0.split("&mdash;")[-1].strip().replace("small edge on ", "")
-        if vside != fav0:
-            gline += (f' &middot; or for value: <b>{vside} ML '
-                      f'{american(1 - fav_p)}</b> (why below)')
 
     sp = (f'<div class="gap">{r.get("away_sp") or "TBD"} vs {r.get("home_sp") or "TBD"}'
           + (' &middot; <span style="color:var(--yellow)">starter unlisted, range widened</span>'
@@ -118,22 +115,20 @@ def game_card(r):
                    '<div class="btrack"></div><span class="bval">&mdash;</span></div>')
         gaptxt = '<div class="gap">Market has not opened this game yet</div>'
 
-    # Run line, graded the way the NFL page grades the spread
+    # Run line. Backtested at a 40-44% cover rate against Kalshi across the
+    # season -- dead, per docs/baselines.md -- so this never gets the "hit"/
+    # green styling the moneyline and totals verdicts use: that styling
+    # means "this beat the market in testing," and the run line hasn't.
+    # Shown for reference only, folded into the collapsed section below.
     rl_row = ""
     if r.get("p_home_cover") is not None and not pd.isna(r.get("p_home_cover")):
         ph_c, pa_c = float(r["p_home_cover"]), float(r["p_away_cover"])
         side, p = ((r["home"], ph_c) if ph_c >= pa_c else (r["away"], pa_c))
         line = "-1.5"
-        breakeven = 1 / RUNLINE_JUICE
-        if p >= breakeven + 0.05:
-            tag = '<span class="hit">value at a book\'s run line</span>'
-        elif p >= breakeven:
-            tag = '<span style="color:var(--yellow)">slight lean</span>'
-        else:
-            tag = 'no edge on the run line'
         rl_row = (f'<div class="gap">Run line: model has <b>{side} {line}</b> covering '
                   f'<b>{p*100:.0f}%</b> of the time &middot; fair price {american(p)} '
-                  f'&middot; {tag}</div>')
+                  f'&middot; <span style="opacity:.7">not backtested as a bet '
+                  f'(season record: 40-44% covers vs. the market) -- reference only</span></div>')
 
     # Total runs, priced by the negative-binomial model. This used to print
     # "O7.5 51% · O8.5 41% · O9.5 33%" with the actual call tacked on at the
@@ -145,10 +140,17 @@ def game_card(r):
     tot_row = ""
     mt = r.get("mu_total")
     if mt is not None and not pd.isna(mt):
-        call = str(r.get("total_call") or "")
+        # `tcall`, not `call`: `call` is the "Bayesian Model: X by Y runs"
+        # line set at the top of this function and printed in the card's
+        # <div class="call">. Reusing the name here silently overwrote it on
+        # every card with totals data -- the model's actual moneyline call
+        # was replaced by the totals call text ("no edge (best OVER 7.5)")
+        # for the rest of the function. Caught while verifying an unrelated
+        # layout change; this was already live.
+        tcall = str(r.get("total_call") or "")
         te = r.get("total_edge")
-        has_edge = bool(call) and not call.startswith("no edge") and te is not None and not pd.isna(te)
-        src = re.sub(r"^no edge \(best (.+)\)$", r"\1", call)
+        has_edge = bool(tcall) and not tcall.startswith("no edge") and te is not None and not pd.isna(te)
+        src = re.sub(r"^no edge \(best (.+)\)$", r"\1", tcall)
         m = re.match(r"(OVER|UNDER)\s+([\d.]+)", src)
         side, line = (m.group(1).title(), float(m.group(2))) if m else (None, None)
 
@@ -226,11 +228,21 @@ def game_card(r):
                  f'model+narrative {pn*100:.0f}%, '
                  f'{str(r.get("verdict_narrative", "")).replace("&mdash;", "-").lower()}</div>')
 
+    # The badge answers "what do I do" -- it used to sit last, after 8+ lines
+    # of prose. It's first now, right under the matchup. The reasoning behind
+    # it (why this side, not the model's favorite) and the run line (not a
+    # backtested bet) are real information, not clutter, so they stay on the
+    # card -- just collapsed, the same pattern the run-health strip uses.
+    why = "".join(x for x in (note, rl_row) if x)
+    why_block = (f'<details class="why"><summary>Why{" &middot; run line" if rl_row else ""}</summary>'
+                 f'{why}</details>' if why else "")
+
     return (f'<div class="card"><div class="match"><span class="teams">{r["away"]} @ '
             f'{r["home"]}</span><span class="date">{r["date"]}</span></div>'
+            f'<div class="leadv">{verdict_badge(v)}</div>'
             f'<div class="call">{call}</div><div class="gline">{gline}</div>{sp}'
             f'<div class="bars">{model_bar}{narr_bar}{mkt_bar}</div>'
-            f'{gaptxt}{rl_row}{tot_row}{note}{verdict_badge(v)}</div>')
+            f'{gaptxt}{tot_row}{why_block}</div>')
 
 
 def build_parlays(rows, top_n=10):
