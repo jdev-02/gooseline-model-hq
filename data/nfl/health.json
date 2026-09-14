@@ -1,5 +1,5 @@
 {
-  "run_ts": "2026-09-14T07:16:19+00:00",
+  "run_ts": "2026-09-14T07:25:05+00:00",
   "run_date": "2026-09-14",
   "ok": true,
   "hard_failures": [],
@@ -11,14 +11,14 @@
       "name": "games.csv refreshed",
       "ok": true,
       "hard": true,
-      "detail": "46 min old",
+      "detail": "0 min old",
       "stage": "data"
     },
     {
       "name": "rundown ran this run",
       "ok": true,
       "hard": true,
-      "detail": "log last written 13 min old",
+      "detail": "log last written 0 min old",
       "stage": "data"
     },
     {
@@ -53,14 +53,14 @@
       "name": "kalshi-snapshot alive (NFL series)",
       "ok": false,
       "hard": false,
-      "detail": "last snapshot 237 min ago",
+      "detail": "last snapshot 246 min ago",
       "stage": "data"
     },
     {
       "name": "site rebuilt this run",
       "ok": true,
       "hard": true,
-      "detail": "0 min old, 513 KB",
+      "detail": "0 min old, 514 KB",
       "stage": "site"
     },
     {
