@@ -31,7 +31,12 @@ jobs:
         run: |
           set -euo pipefail
           today=$(date -u -d '-4 hours' +%Y-%m-%d)     # slate date, Eastern
-          since="${today}T14:00:00Z"                    # 10:00 ET
+          # Eastern midnight, not "10:00 ET": on 2026-09-14 this read 10:00
+          # ET, so an early manual run at 03:00 ET didn't count as "today's
+          # run" and the watchdog redundantly re-dispatched a workflow that
+          # had already succeeded -- the redundant run then hit a real
+          # docs/index.html rebase conflict with the other sport's run.
+          since="${today}T04:00:00Z"
           problems=()
           notes=()
 

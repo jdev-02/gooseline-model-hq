@@ -58,21 +58,56 @@ jobs:
         id: health_data
         continue-on-error: true
         run: uv run python ops/healthcheck.py --stage data
+      - name: commit data
+        # docs/index.html is deliberately NOT part of this commit. It is a
+        # single generated file that both mlb-daily and nfl-daily rebuild in
+        # full and commit; on 2026-09-14 that produced a real rebase conflict
+        # (two different regenerated copies of the same lines), not a race --
+        # the shared concurrency group already serializes these workflows,
+        # but sequential commits to the same generated file still conflict
+        # textually. Data files never overlap between the two workflows, so
+        # they commit and rebase here; the site is rebuilt fresh against
+        # whatever just landed and committed on its own, below.
+        run: |
+          git config user.name "model-hq-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/mlb/raw/schedule/2026.json.gz data/mlb/games.csv data/mlb/narrative/log.csv data/mlb/paper_trades.csv data/mlb/market_backtest_ml.txt data/mlb/market_backtest_totals.txt data/mlb/health.json
+          git diff --cached --quiet && exit 0
+          git commit -m "data(mlb): daily rundown $(date -u +%Y-%m-%dT%H:%MZ)"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            sleep $((i * 5))
+          done
+          echo "::error::could not land the mlb data commit after 3 attempts" && exit 1
       - name: site
+        # Rebuilt against the just-pulled state, so it reflects the latest
+        # data commit from either workflow, not a snapshot from before it.
         run: uv run python -m src.site.build --db data/kalshi_prices.db
       - name: health gate (site)
         id: health_site
         continue-on-error: true
         run: uv run python ops/healthcheck.py --stage site
-      - name: commit
+      - name: commit site
         run: |
           git config user.name "model-hq-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/mlb/raw/schedule/2026.json.gz data/mlb/games.csv data/mlb/narrative/log.csv data/mlb/paper_trades.csv data/mlb/market_backtest_ml.txt data/mlb/market_backtest_totals.txt data/mlb/health.json docs/index.html
+          git add docs/index.html
           git diff --cached --quiet && exit 0
-          git commit -m "data(mlb): daily rundown $(date -u +%Y-%m-%dT%H:%MZ)"
-          git pull --rebase origin main
-          git push origin HEAD:main
+          git commit -m "site(mlb): rebuild $(date -u +%Y-%m-%dT%H:%MZ)"
+          for i in 1 2 3; do
+            # A conflict here is always in docs/index.html alone -- keep our
+            # freshly-built copy rather than attempting a textual merge of a
+            # generated file. Note git's rebase convention inverts the usual
+            # meaning: "ours" is the upstream branch being replayed onto,
+            # "theirs" is the commit being rebased, so -X theirs is correct
+            # here (the opposite of what it would mean in a merge).
+            if git pull --rebase -X theirs origin main; then
+              git push origin HEAD:main && exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((i * 5))
+          done
+          echo "::error::could not land the mlb site commit after 3 attempts" && exit 1
       - name: fail if unhealthy
         if: steps.health_data.outcome == 'failure' || steps.health_site.outcome == 'failure'
         run: |
