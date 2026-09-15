@@ -218,6 +218,12 @@ nav button.on:hover{color:#08120b}
 /* A disagreement with the price, stated as such: neutral, not green. Green
    would claim value the moneyline record contradicts (docs/baselines.md). */
 .v-dis{background:none;border:1px solid var(--white);color:var(--white)}
+.v-small{background:none;border:1px solid var(--green);color:var(--green)}
+.how.pass{color:var(--dim)}
+.start{margin:12px 0 6px;padding:12px 16px;border:1px solid var(--green);border-radius:12px;font-size:.92rem;line-height:1.5}
+.start ol{margin:6px 0 0 20px;padding:0}
+.start li{margin:5px 0}
+.start .verdict{margin:0 4px 0 0}
 .v-caut{background:var(--yellow);color:#141005}
 .v-avoid{background:none;border:1px solid var(--red);color:var(--red)}
 .v-none{background:none;border:1px solid var(--dim);color:var(--dim)}
@@ -356,7 +362,7 @@ probability, since 65 cents means 65%. A team looks cheap when the model's numbe
 and the price differ by more than the fees. Whether cheap means <i>worth buying</i>
 is an empirical question, and the answer so far is no: over five walk-forward
 seasons the market was right more often than the model whenever they differed
-(Track Record). Those games are shown as RISKY because that is what the model
+(Track Record). Those games are shown as PASS because that is what the model
 produces; the record is shown next to them because that is what happened.</p>
 <p><b>What this model honestly cannot see.</b> Injuries announced this week,
 coaches resting starters, weather. Every flag gets a human news check before
@@ -426,12 +432,10 @@ def _cents(p):
     return f"{float(p)*100:.0f}&cent;"
 
 
-_WORD = {"risky": ("RISKY", "v-caut"), "none": ("NO BET", "v-none")}
-
-
 def _nfl_flags(r):
     """[(kind, what, edge)] for the markets the model flags. NFL has no BET
-    tier: nothing here has beaten the market (docs/baselines.md)."""
+    or SMALL BET tier: nothing here has beaten the market
+    (docs/baselines.md), so every flag is shown and marked PASS."""
     out = []
     v = str(r.get("verdict", ""))
     if v.startswith("HIGH VALUE") and "&mdash;" in v and _num(r.get("mkt_home")):
@@ -466,15 +470,15 @@ def _how(r, kind, what, edge):
             wins = f"the {nick(team)} win, or lose by <b>{int(line)} points or fewer</b>"
         rec = "The spread pick covered 49.2% over five seasons against a 52.4% breakeven"
     ptxt = f" at <b>{_cents(cost)}</b>" if _num(cost) else ""
-    return (f'<div class="how">Buy <b>{_pretty(kind, what)}</b>{ptxt} on Kalshi. It wins if {wins}. '
-            f'Edge {edge*100:+.1f}% after fees. <span class="warn">{rec} &mdash; that is why this '
-            f'is marked risky, not a bet.</span></div>')
+    return (f'<div class="how pass">The model likes <b>{_pretty(kind, what)}</b>{ptxt} '
+            f'(edge {edge*100:+.1f}% after fees; it wins if {wins}), but {rec[0].lower() + rec[1:]} '
+            f'&mdash; <b>sit this one out</b>.</div>')
 
 
 def game_card(r):
     """One card, for someone who has never placed a bet. Three lines, same
     order every time: Moneyline, Spread, Total (not modeled for football).
-    RISKY or NO BET only, with the tested record in the sentence."""
+    PASS only, with the model's lean and the tested record in the sentence."""
     mu, sigma, pm = r["mu"], r["sigma"], r["p_home"]
     home, away = r["home"], r["away"]
     H, A = nick(home), nick(away)
@@ -492,32 +496,28 @@ def game_card(r):
     for kind, lab in (("ML", "Moneyline"), ("SPREAD", "Spread"), ("TOTAL", "Total")):
         f = flags.get(kind)
         if f:
-            val = (f'<span class="verdict v-caut mini">RISKY</span> {_pretty(kind, f[1])} '
-                   f'<span class="lnote">{f[2]*100:+.1f}%</span>')
+            val = (f'<span class="verdict v-none mini">PASS</span> {_pretty(kind, f[1])} '
+                   f'<span class="lnote">{f[2]*100:+.1f}% &middot; market unproven</span>')
         elif kind == "TOTAL":
             val = '<span class="lnote">not modeled for football</span>'
         else:
-            val = '<span class="verdict v-none mini">NO BET</span>'
+            val = '<span class="verdict v-none mini">PASS</span> <span class="lnote">price is fair</span>'
         rows.append(f'<div class="mrow"><span class="mlab">{lab}</span>{val}</div>')
     mkts = f'<div class="mkts">{"".join(rows)}</div>'
 
     if head:
         kind, what, edge = head
-        tier = "risky"
-        badge = f'<span class="verdict v-caut">RISKY &middot; {_pretty(kind, what)}</span>'
+        tier = "pass"
+        badge = '<span class="verdict v-none">PASS</span>'
         body = _how(r, kind, what, edge)
-        side = what.split(" to win")[0] if kind == "ML" else what.split()[0]
-        if side != fav0:
-            body += (f'<div class="also">We still expect the <b>{nick(fav0)}</b> to win '
-                     f'({fav_p*100:.0f}%); this is a price bet on the {nick(side)}, not a pick.</div>')
     elif v.startswith("STALE"):
         tier = "stale"
         badge = '<span class="verdict v-caut">PRICE STALE &middot; re-check</span>'
         body = ('<div class="how">The price we saw is too old to act on. Open Kalshi and look '
                 'before you buy anything here.</div>')
     else:
-        tier = "none"
-        badge = '<span class="verdict v-none">NO BET</span>'
+        tier = "pass"
+        badge = '<span class="verdict v-none">PASS</span>'
         body = ('<div class="how">Every price is fair. Nothing here is worth buying this week.</div>'
                 if has_price else '<div class="how">No price on Kalshi yet.</div>')
     if abs(fav_p - 0.5) < 0.005:
@@ -577,17 +577,25 @@ def game_card(r):
 def card_tier(r):
     v = str(r.get("verdict", ""))
     if _nfl_flags(r):
-        return "risky"
+        return "pass"
     if v.startswith("STALE"):
         return "stale"
-    return "none"
+    return "pass"
+
+
+def start_here(rows):
+    n = sum(len(_nfl_flags(r)) for r in rows)
+    why = (f' The model likes {n} side{"s" if n != 1 else ""} this week; every one is marked PASS '
+           f'on its card with the edge, because no football market here has beaten Kalshi in '
+           f'testing.') if n else ""
+    return f'<div class="start"><b>Start here:</b> nothing to bet this week.{why}</div>'
 
 
 def tier_buttons(rows, scope):
     from collections import Counter
     counts = Counter(card_tier(r) for r in rows)
-    spec = [("all", "All games", len(rows)), ("risky", "Risky", counts.get("risky", 0)),
-            ("stale", "Stale price", counts.get("stale", 0)), ("none", "No bet", counts.get("none", 0))]
+    spec = [("all", "All games", len(rows)), ("pass", "Pass", counts.get("pass", 0)),
+            ("stale", "Stale price", counts.get("stale", 0))]
     btns = "".join(
         f'<button id="tier-{scope}-{k}" class="bandbtn{" on" if k == "all" else ""}"'
         f'{"" if n or k == "all" else " disabled"} onclick="mtier(\'{k}\',\'{scope}\')">'
@@ -769,14 +777,15 @@ def build_site(out_path="site.html", games_path="data/nfl/games.csv",
 
 <div id="week" class="panel on">
 <h2>This Week</h2>
-<p class="sub">Two words. <b style="color:var(--yellow)">RISKY</b> means a team looks
-cheaper than it should be, but picking a team to win lost 12% over five seasons in
-testing (871 bets), and the spread pick covered 49.2% against a 52.4% breakeven
-&mdash; so it is your call, not ours. There is no BET tier for football: nothing here
-has beaten the market yet. <b>NO BET</b> means the price is fair. Tap <b>Details</b>
-on any card for the numbers. Check injuries and inactives before you buy: the model
-cannot see them.</p>
-{week_note}{price_age}{tier_buttons(week_rows, "nfl") if week_rows else ""}<div class="grid">{cards}</div>
+<p class="sub">One word for now: <b>PASS</b>. The same three words as the MLB page
+(<b style="color:var(--green)">BET</b> one unit, <b style="color:var(--green)">SMALL BET</b>
+half a unit, <b>PASS</b> do nothing) are earned by a market's own record, and no football
+market has earned anything: picking a team to win lost 12% over five seasons in testing
+(871 bets), and the spread pick covered 49.2% against a 52.4% breakeven. When the model
+likes a side, the card still shows it with the edge, so you can see the disagreement;
+the word next to it says leave it. Tap <b>Details</b> on any card for the numbers.
+Check injuries and inactives before you buy anything: the model cannot see them.</p>
+{week_note}{price_age}{(start_here(week_rows) + tier_buttons(week_rows, "nfl")) if week_rows else ""}<div class="grid">{cards}</div>
 </div>
 
 <div id="parlays" class="panel">

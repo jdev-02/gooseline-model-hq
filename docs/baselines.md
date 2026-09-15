@@ -212,9 +212,10 @@ script) flattered 7.5 by 10 points and the under side generally.
 The site now says so by rule rather than by prose: a market shows BET only
 when its live paper trade (`data/mlb/paper_trades.csv`) has ≥100 settled
 bets, positive overall and positive over the most recent half
-(`src/mlb/labels.py`). Everything the model flags in a market that has not
-earned that is RISKY, with the market's record on the card. Totals at
-79 settled bets (+1.9%, recent +4.0%) has not earned it. It is not
+(`src/mlb/labels.py`); SMALL BET (half a unit) is the same test on ≥20 bets;
+everything else the model flags is PASS, shown with the market's record on
+the card so the disagreement is visible but not acted on. Totals at
+79 settled bets (+1.9%, recent +4.0%) is SMALL BET. It is not
 bettable on 85 games. It needs several hundred, and it needs the inputs
 that actually move totals and that the market may under-price: home-plate
 umpire, weather and wind at outdoor parks, posted lineups. Those are the

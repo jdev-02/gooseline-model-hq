@@ -102,7 +102,7 @@ def _cents(p):
     return f"{float(p)*100:.0f}&cent;"
 
 
-_WORD = {"bet": ("BET", "v-high"), "risky": ("RISKY", "v-caut"), "none": ("NO BET", "v-none")}
+_WORD = {"bet": ("BET", "v-high"), "small": ("SMALL BET", "v-small"), "pass": ("PASS", "v-none")}
 _KIND_LABEL = {"ML": "Moneyline", "SPREAD": "Run line", "TOTAL": "Total runs"}
 _KIND_VERB = {"ML": "Picking a team to win", "SPREAD": "Betting the run line",
               "TOTAL": "Betting total runs"}
@@ -142,24 +142,57 @@ def _pretty(kind, what):
 
 
 def _how(r, kind, tier, what, edge):
+    """One sentence that is an instruction. BET / SMALL BET: what to buy, the
+    price, the size, what makes it win. PASS: what the model likes, and the
+    record that says not to act on it."""
     cost, wins = _market_price_and_wins(r, kind, what)
     ptxt = f" at <b>{_cents(cost)}</b>" if _num(cost) else ""
-    s = (f'Buy <b>{_pretty(kind, what)}</b>{ptxt} on Kalshi. It wins if {wins}. '
-         f'Edge {edge*100:+.1f}% after fees.')
-    if tier != "bet":
-        s += (f' <span class="warn">{_KIND_VERB[kind]} {labels.record_phrase(kind)} &mdash; '
-              f'not a bet yet: {labels.why_not_bet(kind)}.</span>')
+    if tier == "pass":
+        s = (f'The model likes <b>{_pretty(kind, what)}</b>{ptxt} (edge {edge*100:+.1f}% after fees), '
+             f'but {_KIND_VERB[kind].lower()} {labels.record_phrase(kind)} &mdash; '
+             f'<b>sit this one out</b>: {labels.why_not_bet(kind)}.')
+        return f'<div class="how pass">{s}</div>'
+    s = (f'Buy <b>{_pretty(kind, what)}</b>{ptxt} on Kalshi, <b>{labels.UNIT[tier]}</b>. '
+         f'It wins if {wins}. Edge {edge*100:+.1f}% after fees.')
+    if tier == "small":
+        s += (f' <span class="warn">Half a unit because {_KIND_VERB[kind].lower()} '
+              f'{labels.record_phrase(kind)}: {labels.why_not_bet(kind)}.</span>')
     return f'<div class="how">{s}</div>'
+
+
+def start_here(slate):
+    """The ranked list at the top of the slate: every BET and SMALL BET,
+    best first, each one an instruction. Empty means sit the day out, and
+    the box says so instead of hiding."""
+    ranked = labels.ranked(slate)
+    if not ranked:
+        n = sum(1 for r in slate for _ in labels.market_flags(r))
+        why = (f' The model likes {n} side{"s" if n != 1 else ""} today, all in markets '
+               f'that have lost money in live betting; they are marked PASS on the cards '
+               f'so you can see them, and the record says not to buy them.') if n else ""
+        return (f'<div class="start"><b>Start here:</b> nothing to bet today.{why}</div>')
+    items = []
+    for i, (r, (kind, tier, what, edge)) in enumerate(ranked, 1):
+        cost, wins = _market_price_and_wins(r, kind, what)
+        ptxt = f" at {_cents(cost)}" if _num(cost) else ""
+        items.append(
+            f'<li><span class="verdict {_WORD[tier][1]} mini">{_WORD[tier][0]}</span> '
+            f'<b>{_pretty(kind, what)}</b>{ptxt}, {labels.UNIT[tier]} &mdash; '
+            f'{nick(r["away"])} at {nick(r["home"])}. Wins if {wins}. Edge {edge*100:+.1f}%.</li>')
+    return (f'<div class="start"><b>Start here</b> &mdash; {len(items)} '
+            f'bet{"s" if len(items) != 1 else ""} today, best first. A unit is whatever you '
+            f'decided a unit is before you opened this page.<ol>{"".join(items)}</ol></div>')
 
 
 def game_card(r):
     """One card, for someone who has never placed a bet.
 
     Three markets, three lines, always in the same order: Moneyline, Run
-    line, Total runs. Each carries its own word -- BET, RISKY, NO BET --
+    line, Total runs. Each carries its own word -- BET, SMALL BET, PASS --
     decided by that market's own live record (src/mlb/labels.py). The
     headline is the strongest of the three, with one sentence saying what
-    to buy, the price, and what makes it win. Every number is under
+    to buy, the price, the size, and what makes it win; or, on a PASS, what
+    the model likes and why the record says leave it. Every number is under
     Details."""
     mu, sg, pm = r["mu"], r["sigma"], r["p_home"]
     home, away = r["home"], r["away"]
@@ -180,10 +213,11 @@ def game_card(r):
         if f:
             word, cls = _WORD[f[1]]
             val = (f'<span class="verdict {cls} mini">{word}</span> {_pretty(kind, f[2])} '
-                   f'<span class="lnote">{f[3]*100:+.1f}%</span>')
+                   f'<span class="lnote">{f[3]*100:+.1f}%'
+                   f'{" &middot; market unproven" if f[1] == "pass" else ""}</span>')
         else:
-            word, cls = _WORD["none"]
-            val = f'<span class="verdict {cls} mini">{word}</span>'
+            word, cls = _WORD["pass"]
+            val = f'<span class="verdict {cls} mini">{word}</span> <span class="lnote">price is fair</span>'
         mkt_rows.append(f'<div class="mrow"><span class="mlab">{_KIND_LABEL[kind]}</span>{val}</div>')
     mkts = f'<div class="mkts">{"".join(mkt_rows)}</div>'
 
@@ -191,10 +225,11 @@ def game_card(r):
     if head:
         kind, tier, what, edge = head
         word, cls = _WORD[tier]
-        badge = f'<span class="verdict {cls}">{word} &middot; {_pretty(kind, what)}</span>'
+        badge = (f'<span class="verdict {cls}">{word} &middot; {_pretty(kind, what)}</span>'
+                 if tier != "pass" else f'<span class="verdict {cls}">{word}</span>')
         body = _how(r, kind, tier, what, edge)
         side = what.split(" to win")[0] if kind == "ML" else (what.split()[0] if kind == "SPREAD" else None)
-        if side and side != fav0:
+        if tier != "pass" and side and side != fav0:
             body += (f'<div class="also">We still expect the <b>{nick(fav0)}</b> to win '
                      f'({fav_p*100:.0f}%); this is a price bet on the {nick(side)}, not a pick.</div>')
     elif v.startswith("STALE"):
@@ -203,8 +238,8 @@ def game_card(r):
         body = ('<div class="how">The price we saw is too old to act on. Open Kalshi and look '
                 'before you buy anything here.</div>')
     else:
-        tier = "none"
-        badge = '<span class="verdict v-none">NO BET</span>'
+        tier = "pass"
+        badge = '<span class="verdict v-none">PASS</span>'
         body = ('<div class="how">Every price is fair. Nothing here is worth buying today.</div>'
                 if has_price else '<div class="how">No price on Kalshi yet.</div>')
     if abs(fav_p - 0.5) < 0.005:
@@ -599,8 +634,8 @@ def tier_buttons(slate, scope):
     from collections import Counter
     counts = Counter(card_tier(r) for r in slate)
     spec = [("all", "All games", len(slate)), ("bet", "Bets", counts.get("bet", 0)),
-            ("risky", "Risky", counts.get("risky", 0)), ("stale", "Stale price", counts.get("stale", 0)),
-            ("none", "No bet", counts.get("none", 0))]
+            ("small", "Small bets", counts.get("small", 0)), ("pass", "Pass", counts.get("pass", 0)),
+            ("stale", "Stale price", counts.get("stale", 0))]
     btns = "".join(
         f'<button id="tier-{scope}-{k}" class="bandbtn{" on" if k == "all" else ""}"'
         f'{"" if n or k == "all" else " disabled"} onclick="mtier(\'{k}\',\'{scope}\')">'
@@ -613,7 +648,7 @@ def render(slate, today, health=None):
     slate = sorted(slate, key=slate_sort_key)
     cards = "".join(game_card(r) for r in slate) or \
         '<p class="sub">No games in the upcoming window.</p>'
-    tiers = tier_buttons(slate, "mlb") if slate else ""
+    tiers = (start_here(slate) + tier_buttons(slate, "mlb")) if slate else ""
     parlays = build_parlays(slate)
     prows = "".join(
         f'<tr class="prow band-{p["band"]}"><td>{p["legs"]}</td>'
@@ -638,11 +673,13 @@ def render(slate, today, health=None):
 <h2>Today's Slate</h2>
 <p class="sub">Three markets on every card, same order every time: <b>Moneyline</b> (who
 wins), <b>Run line</b> (wins by 2 or more, or loses by no more than 1), <b>Total runs</b>
-(over or under a number). Each gets one of three words. <b style="color:var(--green)">BET</b>
-is a bet we would make today; a market earns that word from its own record, not from us:
-at least {labels.MIN_BETS} settled bets, profitable overall and over the most recent half.
-<b style="color:var(--yellow)">RISKY</b> means the model thinks something is cheaper than
-it should be, in a market that has not earned it. <b>NO BET</b> means the price is fair.
+(over or under a number). Each gets one of three words, and each word is an instruction.
+<b style="color:var(--green)">BET</b>: one unit. <b style="color:var(--green)">SMALL BET</b>:
+half a unit. <b>PASS</b>: do nothing. A market earns its word from its own live record, not
+from us: BET needs at least {labels.MIN_BETS} settled bets, profitable overall and over the
+most recent half; SMALL BET the same on at least {labels.SMALL_MIN}. When the model likes a
+side in a market that has not earned it, the line still shows the side and the edge, marked
+PASS, so you can see the disagreement without being told to buy it.
 Records so far: picking a team to win {labels.record_phrase("ML")}; the run line
 {labels.record_phrase("SPREAD")}; total runs {labels.record_phrase("TOTAL")}. Tap
 <b>Details</b> on any card for the numbers. Check the lineup before you buy.</p>

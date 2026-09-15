@@ -1,12 +1,20 @@
 """The word on the card, decided by the record, not by prose.
 
-BET is earned, per market, from the live paper trade in
-data/mlb/paper_trades.csv: at least MIN_BETS settled, positive return
-overall, and positive over the most recent half. Anything the model flags in
-a market that has not earned it is RISKY, and the card quotes that market's
-record in plain words. When a market's record turns, the word turns with it;
-nobody edits copy. Used by the rundown (so the logged row and the public feed
-carry the label) and by the site (so the page shows the same one).
+Three words, each an instruction:
+
+  BET        one unit. The market has earned it in the live paper trade
+             (data/mlb/paper_trades.csv): at least MIN_BETS settled,
+             profitable overall and over the most recent half.
+  SMALL BET  half a unit. Same conditions on at least SMALL_MIN bets: the
+             market is up, but the sample is still short.
+  PASS       do nothing. The market's live record is negative or too short,
+             or the price is fair. The line still shows what the model
+             likes and by how much, so the disagreement is visible; the
+             record says not to act on it.
+
+When a market's record turns, the word turns with it; nobody edits copy.
+Used by the rundown (so the logged row and the public feed carry the label)
+and by the site (so the page shows the same one).
 """
 from __future__ import annotations
 
@@ -17,7 +25,9 @@ import pandas as pd
 from src.mlb.compile import DATA
 
 MIN_BETS = 100
+SMALL_MIN = 20
 THRESH = 0.04
+UNIT = {"bet": "one unit", "small": "half a unit"}
 
 
 def _trades():
@@ -52,9 +62,20 @@ def market_record(kind):
             "since": str(g["date"].min())}
 
 
-def bet_allowed(kind):
+def action(kind):
+    """'bet' | 'small' | 'pass' for a market, from its live record alone."""
     r = market_record(kind)
-    return bool(r and r["n"] >= MIN_BETS and r["roi"] > 0 and r["recent_roi"] > 0)
+    if not r or r["roi"] <= 0 or r["recent_roi"] <= 0:
+        return "pass"
+    if r["n"] >= MIN_BETS:
+        return "bet"
+    if r["n"] >= SMALL_MIN:
+        return "small"
+    return "pass"
+
+
+def bet_allowed(kind):
+    return action(kind) == "bet"
 
 
 def record_phrase(kind):
@@ -68,15 +89,17 @@ def record_phrase(kind):
 
 
 def why_not_bet(kind):
-    """One clause explaining why a flagged market is RISKY rather than BET."""
+    """One clause explaining why a flagged market is not a full BET."""
     r = market_record(kind)
     if not r:
         return "no settled record yet"
-    if r["n"] < MIN_BETS:
-        return f"fewer than {MIN_BETS} settled bets so far ({r['n']})"
     if r["roi"] <= 0:
         return "the record is negative"
-    return "the most recent half is negative"
+    if r["recent_roi"] <= 0:
+        return "the most recent half is negative"
+    if r["n"] < SMALL_MIN:
+        return f"fewer than {SMALL_MIN} settled bets so far ({r['n']})"
+    return f"profitable, but on fewer than {MIN_BETS} settled bets ({r['n']})"
 
 
 def _num(x):
@@ -124,21 +147,21 @@ def market_flags(row):
     out = []
     side = ml_flag(row)
     if side:
-        out.append(("ML", "bet" if bet_allowed("ML") else "risky", f"{side} to win",
-                    float(row.get("edge") or 0)))
+        out.append(("ML", action("ML"), f"{side} to win", float(row.get("edge") or 0)))
     sf = spread_flag(row)
     if sf:
-        out.append(("SPREAD", "bet" if bet_allowed("SPREAD") else "risky",
-                    f"{sf[0]} {sf[1]:+g}", float(row.get("spread_edge") or 0)))
+        out.append(("SPREAD", action("SPREAD"), f"{sf[0]} {sf[1]:+g}",
+                    float(row.get("spread_edge") or 0)))
     tf = totals_flag(row)
     if tf:
-        out.append(("TOTAL", "bet" if bet_allowed("TOTAL") else "risky",
-                    f"{tf[0].title()} {tf[1]:g} runs", float(row.get("total_edge") or 0)))
+        out.append(("TOTAL", action("TOTAL"), f"{tf[0].title()} {tf[1]:g} runs",
+                    float(row.get("total_edge") or 0)))
     return out
 
 
-_RANK = {"bet": 2, "risky": 1}
+_RANK = {"bet": 3, "small": 2, "pass": 1}
 _ORDER = {"ML": 0, "SPREAD": 1, "TOTAL": 2}
+WORD = {"bet": "BET", "small": "SMALL BET", "pass": "PASS"}
 
 
 def headline(row):
@@ -154,27 +177,48 @@ def headline(row):
 
 
 def tier_for(row):
-    """'bet' | 'risky' | 'stale' | 'none'."""
+    """'bet' | 'small' | 'pass' | 'stale'. A flagged market whose record says
+    not to act is 'pass', the same word as a fair price: the instruction to
+    the reader is the same."""
     v = str(row.get("verdict", ""))
     h = headline(row)
     if h:
         return h[1]
     if v.startswith("STALE"):
         return "stale"
-    return "none"
+    return "pass"
+
+
+def pretty(kind, what, nick=lambda c: c):
+    if kind == "ML":
+        return f"{nick(what.split(' to win')[0])} to win"
+    if kind == "SPREAD":
+        team, line = what.split()
+        return f"{nick(team)} {line}"
+    return what
 
 
 def label_for(row, nick=lambda c: c):
     """The exact words on the badge, for the log and the public feed."""
     h = headline(row)
-    if h:
+    if h and h[1] in ("bet", "small"):
         kind, tier, what, _ = h
-        if kind == "ML":
-            what = f"{nick(what.split(' to win')[0])} to win"
-        elif kind == "SPREAD":
-            team, line = what.split()
-            what = f"{nick(team)} {line}"
-        return f"{'BET' if tier == 'bet' else 'RISKY'} · {what}"
-    if str(row.get("verdict", "")).startswith("STALE"):
+        return f"{WORD[tier]} · {pretty(kind, what, nick)}"
+    if not h and str(row.get("verdict", "")).startswith("STALE"):
         return "PRICE STALE · re-check"
-    return "NO BET"
+    return "PASS"
+
+
+def ranked(rows):
+    """Every BET and SMALL BET on the slate, best first: by word, then by
+    the market's live return, then by edge. This is the list a reader acts
+    on top to bottom; a slate with nothing in it means sit the day out.
+    Returns [(row, (kind, tier, what, edge))]."""
+    out = []
+    for r in rows:
+        for f in market_flags(r):
+            if f[1] in ("bet", "small"):
+                out.append((r, f))
+    roi = {k: (market_record(k) or {}).get("roi", 0.0) for k in ("ML", "SPREAD", "TOTAL")}
+    out.sort(key=lambda rf: (-_RANK[rf[1][1]], -float(roi[rf[1][0]]), -rf[1][3]))
+    return out
