@@ -105,6 +105,26 @@ for r in log.itertuples(index=False):
                              ask=ask, p_model=p_model, edge=float(edge), won=bool(won),
                              price_age_min=getattr(r, "price_age_min", np.nan)))
 
+    # ---- spread ----
+    se = getattr(r, "spread_edge", np.nan)
+    scall = str(getattr(r, "spread_call", "") or "")
+    sprice = getattr(r, "spread_price", np.nan)
+    if (pd.notna(se) and se >= args.min_edge and scall and not scall.startswith("no edge")
+            and pd.notna(sprice)):
+        parts = scall.split()
+        if len(parts) == 2 and parts[1][0] in "+-":
+            team, line = parts[0], float(parts[1])
+            # result is home minus away; the team's own margin flips for away.
+            tm = result if team == r.home else -result
+            # "TEAM -1.5" (line=-1.5) wins if the team's margin > 1.5;
+            # "TEAM +1.5" (line=+1.5) wins if the team's margin > -1.5.
+            # Both are margin > -line.
+            won = tm > -line
+            p_model = float(getattr(r, "spread_p", np.nan))
+            rows.append(dict(date=r.date, game_pk=pk, market="SPREAD", pick=scall,
+                             ask=float(sprice), p_model=p_model, edge=float(se), won=bool(won),
+                             price_age_min=getattr(r, "price_age_min", np.nan)))
+
     # ---- total ----
     te = getattr(r, "total_edge", np.nan)
     call = str(getattr(r, "total_call", ""))

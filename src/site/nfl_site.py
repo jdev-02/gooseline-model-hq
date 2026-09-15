@@ -426,42 +426,97 @@ def _cents(p):
     return f"{float(p)*100:.0f}&cent;"
 
 
+_WORD = {"risky": ("RISKY", "v-caut"), "none": ("NO BET", "v-none")}
+
+
+def _nfl_flags(r):
+    """[(kind, what, edge)] for the markets the model flags. NFL has no BET
+    tier: nothing here has beaten the market (docs/baselines.md)."""
+    out = []
+    v = str(r.get("verdict", ""))
+    if v.startswith("HIGH VALUE") and "&mdash;" in v and _num(r.get("mkt_home")):
+        out.append(("ML", f"{v.split('&mdash;')[-1].strip()} to win", float(r.get("edge") or 0)))
+    se, call = r.get("spread_edge"), str(r.get("spread_call") or "")
+    if call and not call.startswith("no edge") and _num(se) and float(se) > 0.04:
+        out.append(("SPREAD", call, float(se)))
+    return out
+
+
+def _pretty(kind, what):
+    if kind == "ML":
+        return f"{nick(what.split(' to win')[0])} to win"
+    team, line = what.split()
+    return f"{nick(team)} {line}"
+
+
+def _how(r, kind, what, edge):
+    home = r["home"]
+    if kind == "ML":
+        side = what.split(" to win")[0]
+        cost = r.get("mkt_home") if side == home else r.get("mkt_away")
+        wins = f"the {nick(side)} win"
+        rec = "Picking a team to win has lost 12% over five seasons in testing (871 bets)"
+    else:
+        team, line = what.split()
+        line = float(line)
+        cost = r.get("spread_price")
+        if line < 0:
+            wins = f"the {nick(team)} win by <b>{int(-line) + 1} points or more</b>"
+        else:
+            wins = f"the {nick(team)} win, or lose by <b>{int(line)} points or fewer</b>"
+        rec = "The spread pick covered 49.2% over five seasons against a 52.4% breakeven"
+    ptxt = f" at <b>{_cents(cost)}</b>" if _num(cost) else ""
+    return (f'<div class="how">Buy <b>{_pretty(kind, what)}</b>{ptxt} on Kalshi. It wins if {wins}. '
+            f'Edge {edge*100:+.1f}% after fees. <span class="warn">{rec} &mdash; that is why this '
+            f'is marked risky, not a bet.</span></div>')
+
+
 def game_card(r):
-    """One card, for someone who has never placed a bet. RISKY or NO BET
-    only: nothing on the NFL side has a market it has beaten (moneyline
-    -12% over five walk-forward seasons, spread 49.2% vs 52.4% breakeven,
-    docs/baselines.md), so there is no BET tier here. Full team names;
-    every number under a Details tap."""
+    """One card, for someone who has never placed a bet. Three lines, same
+    order every time: Moneyline, Spread, Total (not modeled for football).
+    RISKY or NO BET only, with the tested record in the sentence."""
     mu, sigma, pm = r["mu"], r["sigma"], r["p_home"]
     home, away = r["home"], r["away"]
     H, A = nick(home), nick(away)
     fav0 = home if pm >= 0.5 else away
     fav_p = pm if pm >= 0.5 else 1 - pm
-    v = str(r.get("verdict", ""))
-    vside = v.split("&mdash;")[-1].strip() if ("&mdash;" in v and v.startswith("HIGH VALUE")) else ""
-    edge = r.get("edge")
+    v = str(r["verdict"])
     mk_h, mk_a = r.get("mkt_home"), r.get("mkt_away")
     has_price = _num(mk_h)
+    flags = {f[0]: f for f in _nfl_flags(r)}
+    head = max(flags.values(), key=lambda f: f[2]) if flags else None
 
-    if vside and has_price:
-        price = mk_h if vside == home else mk_a
-        ptxt = f" at <b>{_cents(price)}</b>" if _num(price) else ""
-        etxt = f" Edge {float(edge)*100:+.1f}% after fees." if _num(edge) else ""
-        still = (f" We still expect the <b>{nick(fav0)}</b> to win this game ({fav_p*100:.0f}%); "
-                 f"the {nick(vside)} are just cheaper than they should be." if vside != fav0 else "")
+    rows = []
+    for kind, lab in (("ML", "Moneyline"), ("SPREAD", "Spread"), ("TOTAL", "Total")):
+        f = flags.get(kind)
+        if f:
+            val = (f'<span class="verdict v-caut mini">RISKY</span> {_pretty(kind, f[1])} '
+                   f'<span class="lnote">{f[2]*100:+.1f}%</span>')
+        elif kind == "TOTAL":
+            val = '<span class="lnote">not modeled for football</span>'
+        else:
+            val = '<span class="verdict v-none mini">NO BET</span>'
+        rows.append(f'<div class="mrow"><span class="mlab">{lab}</span>{val}</div>')
+    mkts = f'<div class="mkts">{"".join(rows)}</div>'
+
+    if head:
+        kind, what, edge = head
         tier = "risky"
-        badge = f'<span class="verdict v-caut">RISKY &middot; {nick(vside)} to win</span>'
-        body = (f'<div class="how">Buy <b>{nick(vside)} to win</b>{ptxt} on Kalshi. It wins if the '
-                f'{nick(vside)} win.{etxt}{still} <span class="warn">Picking a team to win has lost '
-                f'12% over five seasons in testing (871 bets) &mdash; that is why this is marked '
-                f'risky, not a bet.</span></div>')
+        badge = f'<span class="verdict v-caut">RISKY &middot; {_pretty(kind, what)}</span>'
+        body = _how(r, kind, what, edge)
+        side = what.split(" to win")[0] if kind == "ML" else what.split()[0]
+        if side != fav0:
+            body += (f'<div class="also">We still expect the <b>{nick(fav0)}</b> to win '
+                     f'({fav_p*100:.0f}%); this is a price bet on the {nick(side)}, not a pick.</div>')
     elif v.startswith("STALE"):
-        tier, badge = "stale", '<span class="verdict v-caut">PRICE STALE &middot; re-check</span>'
+        tier = "stale"
+        badge = '<span class="verdict v-caut">PRICE STALE &middot; re-check</span>'
         body = ('<div class="how">The price we saw is too old to act on. Open Kalshi and look '
                 'before you buy anything here.</div>')
     else:
-        tier, badge = "none", '<span class="verdict v-none">NO BET</span>'
-        body = ('<div class="how">The price is fair. Nothing here is worth buying this week.</div>'
+        tier = "none"
+        badge = '<span class="verdict v-none">NO BET</span>'
+        body = ('<div class="how">Every price is fair. Nothing here is worth buying this week.</div>'
                 if has_price else '<div class="how">No price on Kalshi yet.</div>')
     if abs(fav_p - 0.5) < 0.005:
         who = '<div class="who">Who we think wins: <b>too close to call</b></div>'
@@ -469,6 +524,10 @@ def game_card(r):
         who = f'<div class="who">Who we think wins: <b>{nick(fav0)}</b> ({fav_p*100:.0f}% chance)</div>'
 
     d = []
+    for kind, f in flags.items():
+        if head and kind == head[0]:
+            continue
+        d.append(_how(r, kind, f[1], f[2]))
     sl = r.get("spread_line")
     d.append(f'<div class="gap">Model line: <b>{fav_line(mu, home, away)}</b> &plusmn;{sigma:.0f} '
              f'&middot; fair moneyline {american(fav_p)}'
@@ -486,9 +545,11 @@ def game_card(r):
                  f'<span class="bval">{_cents(mk_focus)}</span></div>')
         d.append(f'<div class="bars">{bars}</div><div class="gap">Both bars: chance the <b>{nick(focus)}</b> '
                  f'win. Gap: <b>{(pf-mk_focus)*100:+.0f}</b> points</div>')
-        if vside:
-            v_model = pm if vside == home else 1 - pm
-            v_mkt = mk if vside == home else (float(mk_a) if _num(mk_a) else 1 - mk)
+        mlf = flags.get("ML")
+        if mlf:
+            side = mlf[1].split(" to win")[0]
+            v_model = pm if side == home else 1 - pm
+            v_mkt = mk if side == home else (float(mk_a) if _num(mk_a) else 1 - mk)
             z = square3_gap(v_model, v_mkt)
             if z > SQUARE3_SIGMAS:
                 d.append(f'<div class="gap sq3">Model and market are about <b>{z*sigma:.0f}</b> points apart '
@@ -497,25 +558,26 @@ def game_card(r):
     else:
         d.append(f'<div class="bars">{bars}</div><div class="gap">Kalshi has not opened this game yet.</div>')
     if _num(sl):
-        p_ch = norm.cdf((mu - sl) / sigma)
+        rung = r.get("spread_rung")
+        p_ch = norm.cdf((mu - float(sl)) / sigma)
         side, p = ((home, p_ch) if p_ch >= 0.5 else (away, 1 - p_ch))
-        line = f"-{abs(sl):g}" if (side == home) == (sl > 0) else f"+{abs(sl):g}"
-        d.append(f'<div class="gap">Spread: model covers {nick(side)} {line} {p*100:.0f}% of the time '
-                 f'&middot; <span style="opacity:.7">not a bet: 49.2% covers over five seasons against a '
-                 f'52.4% breakeven</span></div>')
+        line = f"-{abs(float(sl)):g}" if (side == home) == (float(sl) > 0) else f"+{abs(float(sl)):g}"
+        d.append(f'<div class="gap">Spread: model covers {nick(side)} {line} {p*100:.0f}% of the time'
+                 + (f' &middot; priced against Kalshi\'s {rung:g}-point contracts' if _num(rung) else
+                    " &middot; no Kalshi spread quote") + '</div>')
     details = f'<details class="why"><summary>Details</summary>{"".join(d)}</details>'
     kick = str(r.get("kick_iso") or "")
     return (f'<div class="card tier-{tier}" data-teams="{away}@{home}"><div class="match"><span class="teams">{A} at {H}</span>'
             f'<span class="date" data-kick="{kick}">{r["date"]}</span></div>'
-            f'<div class="leadv">{badge}</div>{body}{who}{details}</div>')
+            f'<div class="leadv">{badge}</div>{body}{mkts}{who}{details}</div>')
 
 
 def card_tier(r):
     v = str(r.get("verdict", ""))
+    if _nfl_flags(r):
+        return "risky"
     if v.startswith("STALE"):
         return "stale"
-    if v.startswith("HIGH VALUE") and r.get("mkt_home") is not None and not pd.isna(r.get("mkt_home")):
-        return "risky"
     return "none"
 
 

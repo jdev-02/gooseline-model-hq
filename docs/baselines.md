@@ -264,6 +264,19 @@ Every sportsbook prices weather. It says the model now has the input, and
 the paper trade against Kalshi (`ops/backtest_mlb_totals_market.py`,
 re-run nightly) is the only test of whether the price already holds it.
 
+### Spread / run line, tracked live from 2026-09-15
+
+Until 2026-09-15 the run line (MLB ±1.5) and the NFL spread were shown as a
+probability with no Kalshi price, no logged bet and no live record, so a
+claim like "the model went 5-1 on the spread" could not be checked. Both
+rundowns now price the spread against Kalshi's actual "wins by over X.5"
+contracts (`KXMLBSPREAD`, `KXNFLSPREAD`; NFL at the rung nearest the Vegas
+line), on all four sides (a +line side is the NO of the opponent's −line
+contract, costed at 1 − bid), log `spread_call` / `spread_edge` /
+`spread_price`, and paper-trade it as its own market (`SPREAD`). The
+record accrues under Live Bet Performance; the card word for the run line
+is decided by that record like the other two markets.
+
 ### Where this leaves the mandate
 
 | Market | Result | Status |

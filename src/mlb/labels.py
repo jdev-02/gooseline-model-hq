@@ -27,7 +27,10 @@ def _trades():
     t = pd.read_csv(p)
     if not len(t):
         return None
-    t["kind"] = t["market"].astype(str).str.upper().where(t["market"].astype(str).str.upper() == "ML", "TOTAL")
+    mk = t["market"].astype(str).str.upper()
+    t["kind"] = "TOTAL"
+    t.loc[mk == "ML", "kind"] = "ML"
+    t.loc[mk == "SPREAD", "kind"] = "SPREAD"
     return t
 
 
@@ -99,28 +102,74 @@ def ml_flag(row):
     return None
 
 
+def spread_flag(row):
+    """(team, signed line) if the row carries an actionable spread call."""
+    se = row.get("spread_edge")
+    call = str(row.get("spread_call") or "")
+    if not (call and not call.startswith("no edge") and _num(se) and float(se) > THRESH):
+        return None
+    parts = call.split()
+    if len(parts) != 2:
+        return None
+    try:
+        return parts[0], float(parts[1])
+    except ValueError:
+        return None
+
+
+def market_flags(row):
+    """Every market the model flags on this row, with its word and edge:
+    [(kind, tier, what, edge)]. One row per market, always in the same
+    order, so the card can show three lines that never move."""
+    out = []
+    side = ml_flag(row)
+    if side:
+        out.append(("ML", "bet" if bet_allowed("ML") else "risky", f"{side} to win",
+                    float(row.get("edge") or 0)))
+    sf = spread_flag(row)
+    if sf:
+        out.append(("SPREAD", "bet" if bet_allowed("SPREAD") else "risky",
+                    f"{sf[0]} {sf[1]:+g}", float(row.get("spread_edge") or 0)))
+    tf = totals_flag(row)
+    if tf:
+        out.append(("TOTAL", "bet" if bet_allowed("TOTAL") else "risky",
+                    f"{tf[0].title()} {tf[1]:g} runs", float(row.get("total_edge") or 0)))
+    return out
+
+
+_RANK = {"bet": 2, "risky": 1}
+
+
+def headline(row):
+    """The one flag that leads the card: highest tier, then highest edge."""
+    fl = market_flags(row)
+    if not fl:
+        return None
+    return max(fl, key=lambda f: (_RANK.get(f[1], 0), f[3]))
+
+
 def tier_for(row):
     """'bet' | 'risky' | 'stale' | 'none'."""
     v = str(row.get("verdict", ""))
-    if totals_flag(row):
-        return "bet" if bet_allowed("TOTAL") else "risky"
+    h = headline(row)
+    if h:
+        return h[1]
     if v.startswith("STALE"):
         return "stale"
-    if ml_flag(row):
-        return "bet" if bet_allowed("ML") else "risky"
     return "none"
 
 
 def label_for(row, nick=lambda c: c):
     """The exact words on the badge, for the log and the public feed."""
-    t = tier_for(row)
-    tf = totals_flag(row)
-    if tf:
-        what = f"{tf[0].title()} {tf[1]:g} runs"
-        return f"{'BET' if t == 'bet' else 'RISKY'} · {what}"
-    if t == "stale":
+    h = headline(row)
+    if h:
+        kind, tier, what, _ = h
+        if kind == "ML":
+            what = f"{nick(what.split(' to win')[0])} to win"
+        elif kind == "SPREAD":
+            team, line = what.split()
+            what = f"{nick(team)} {line}"
+        return f"{'BET' if tier == 'bet' else 'RISKY'} · {what}"
+    if str(row.get("verdict", "")).startswith("STALE"):
         return "PRICE STALE · re-check"
-    side = ml_flag(row)
-    if side:
-        return f"{'BET' if t == 'bet' else 'RISKY'} · {nick(side)} to win"
     return "NO BET"

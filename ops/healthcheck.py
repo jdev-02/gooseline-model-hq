@@ -164,6 +164,9 @@ def stage_data(rep, today):
         tq = tlog["mkt_over_8.5"].notna().sum() if "mkt_over_8.5" in tlog else 0
         rep.add("totals have a market price", tq >= max(1, int(0.6 * n)),
                 f"{tq}/{n} games have an O/U 8.5 quote", hard=tq == 0)
+        sq = tlog["mkt_sp_home"].notna().sum() if "mkt_sp_home" in tlog else 0
+        rep.add("run line has a market price", sq >= max(1, int(0.6 * n)),
+                f"{sq}/{n} games have a -1.5 quote", hard=False)
         if "temp_f" in tlog and "roof_closed" in tlog:
             roof = tlog["roof_closed"].astype(str).isin(["True", "1", "1.0"])
             no_wx = (tlog["temp_f"].isna() & ~roof).sum()

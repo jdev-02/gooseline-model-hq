@@ -102,103 +102,122 @@ def _cents(p):
     return f"{float(p)*100:.0f}&cent;"
 
 
+_WORD = {"bet": ("BET", "v-high"), "risky": ("RISKY", "v-caut"), "none": ("NO BET", "v-none")}
+_KIND_LABEL = {"ML": "Moneyline", "SPREAD": "Run line", "TOTAL": "Total runs"}
+_KIND_VERB = {"ML": "Picking a team to win", "SPREAD": "Betting the run line",
+              "TOTAL": "Betting total runs"}
+
+
+def _market_price_and_wins(r, kind, what):
+    """(cost, 'what makes it win' sentence) for one flagged market."""
+    home, away = r["home"], r["away"]
+    if kind == "ML":
+        side = what.split(" to win")[0]
+        cost = r.get("mkt_home") if side == home else r.get("mkt_away")
+        return cost, f"the {nick(side)} win"
+    if kind == "SPREAD":
+        team, line = what.split()
+        line = float(line)
+        cost = r.get("spread_price")
+        if line < 0:
+            return cost, f"the {nick(team)} win by <b>{int(-line) + 1} runs or more</b>"
+        return cost, f"the {nick(team)} win, or lose by <b>{int(line)} run{'s' if int(line) != 1 else ''} or fewer</b>"
+    direction, ln, _ = what.split()
+    ln = float(ln)
+    if direction == "Under":
+        cost = r.get(f"mkt_under_{ln:g}")
+        if not _num(cost) and _num(r.get(f"mkt_over_{ln:g}")):
+            cost = 1 - float(r[f"mkt_over_{ln:g}"])
+        return cost, f"the two teams score <b>{int(ln)} runs or fewer</b>"
+    return r.get(f"mkt_over_{ln:g}"), f"the two teams score <b>{int(ln) + 1} runs or more</b>"
+
+
+def _pretty(kind, what):
+    if kind == "ML":
+        return f"{nick(what.split(' to win')[0])} to win"
+    if kind == "SPREAD":
+        team, line = what.split()
+        return f"{nick(team)} {line}"
+    return what
+
+
+def _how(r, kind, tier, what, edge):
+    cost, wins = _market_price_and_wins(r, kind, what)
+    ptxt = f" at <b>{_cents(cost)}</b>" if _num(cost) else ""
+    s = (f'Buy <b>{_pretty(kind, what)}</b>{ptxt} on Kalshi. It wins if {wins}. '
+         f'Edge {edge*100:+.1f}% after fees.')
+    if tier != "bet":
+        s += (f' <span class="warn">{_KIND_VERB[kind]} {labels.record_phrase(kind)} &mdash; '
+              f'not a bet yet: {labels.why_not_bet(kind)}.</span>')
+    return f'<div class="how">{s}</div>'
+
+
 def game_card(r):
     """One card, for someone who has never placed a bet.
 
-    The headline is one of three words -- BET, RISKY, NO BET -- followed by
-    exactly what to buy, at what price, and what makes it win. Full team
-    names. Every number behind it is under a Details tap. BET is reserved
-    for the total-runs market, the only one Kalshi has not been shown to
-    beat; a cheap-looking moneyline is RISKY because that kind of bet has
-    lost money this season, and the card says so with the live record.
-    """
+    Three markets, three lines, always in the same order: Moneyline, Run
+    line, Total runs. Each carries its own word -- BET, RISKY, NO BET --
+    decided by that market's own live record (src/mlb/labels.py). The
+    headline is the strongest of the three, with one sentence saying what
+    to buy, the price, and what makes it win. Every number is under
+    Details."""
     mu, sg, pm = r["mu"], r["sigma"], r["p_home"]
     home, away = r["home"], r["away"]
     H, A = nick(home), nick(away)
     fav0 = home if pm >= 0.5 else away
     fav_p = pm if pm >= 0.5 else 1 - pm
     v = str(r.get("verdict", ""))
-    vside = ""
-    if "&mdash;" in v and v.startswith("HIGH VALUE"):
-        vside = v.split("&mdash;")[-1].strip()
-    edge = r.get("edge")
     mk_h, mk_a = r.get("mkt_home"), r.get("mkt_away")
     has_price = _num(mk_h)
 
-    # ---- totals: the only BET tier ----
-    mt = r.get("mu_total")
-    te = r.get("total_edge")
-    tcall = str(r.get("total_call") or "")
-    tot_bet = (bool(tcall) and not tcall.startswith("no edge") and _num(te)
-               and float(te) > 0.04 and len(tcall.split()) == 2)
-    tot_line = ""
-    if tot_bet:
-        direction, line = tcall.split()
-        ln = float(line)
-        if direction == "UNDER":
-            price = r.get(f"mkt_under_{ln:g}")
-            if not _num(price):
-                mo = r.get(f"mkt_over_{ln:g}")
-                price = (1 - float(mo)) if _num(mo) else None
-            wins = f"the two teams score <b>{int(ln)} runs or fewer</b>"
-            what = f"Under {ln:g} runs"
-        else:
-            price = r.get(f"mkt_over_{ln:g}")
-            wins = f"the two teams score <b>{int(ln) + 1} runs or more</b>"
-            what = f"Over {ln:g} runs"
-        ptxt = f" at <b>{_cents(price)}</b>" if _num(price) else ""
-        tot_line = (f'<div class="how">Buy <b>{what}</b>{ptxt} on Kalshi. '
-                    f'It wins if {wins}. Edge {float(te)*100:+.1f}% after fees.</div>')
+    flags = {f[0]: f for f in labels.market_flags(r)}     # kind -> (kind, tier, what, edge)
+    head = labels.headline(r)
 
-    # ---- moneyline: RISKY at best ----
-    ml_line = ""
-    if vside and has_price:
-        price = mk_h if vside == home else mk_a
-        ptxt = f" at <b>{_cents(price)}</b>" if _num(price) else ""
-        etxt = f" Edge {float(edge)*100:+.1f}% after fees." if _num(edge) else ""
-        still = (f" We still expect the <b>{nick(fav0)}</b> to win this game ({fav_p*100:.0f}%); "
-                 f"the {nick(vside)} are just cheaper than they should be."
-                 if vside != fav0 else "")
-        ml_line = (f'<div class="how">Buy <b>{nick(vside)} to win</b>{ptxt} on Kalshi. '
-                   f'It wins if the {nick(vside)} win.{etxt}{still} '
-                   f'<span class="warn">Picking a team to win {ml_record()} &mdash; '
-                   f'that is why this is marked risky, not a bet.</span></div>')
-
-    # ---- headline: the word is decided by the market's live record ----
-    if tot_bet:
-        if labels.bet_allowed("TOTAL"):
-            tier, badge = "bet", f'<span class="verdict v-high">BET &middot; {what}</span>'
+    # ---- the three lines ----
+    mkt_rows = []
+    for kind in ("ML", "SPREAD", "TOTAL"):
+        f = flags.get(kind)
+        if f:
+            word, cls = _WORD[f[1]]
+            val = (f'<span class="verdict {cls} mini">{word}</span> {_pretty(kind, f[2])} '
+                   f'<span class="lnote">{f[3]*100:+.1f}%</span>')
         else:
-            tier, badge = "risky", f'<span class="verdict v-caut">RISKY &middot; {what}</span>'
-            tot_line += (f'<div class="how"><span class="warn">Betting totals like this '
-                         f'{labels.record_phrase("TOTAL")}. Not a bet yet: '
-                         f'{labels.why_not_bet("TOTAL")}.</span></div>')
-        body = tot_line + (f'<div class="also">Also cheap, but risky: {nick(vside)} to win '
-                           f'(see Details).</div>' if ml_line else "")
-        also = ""
+            word, cls = _WORD["none"]
+            val = f'<span class="verdict {cls} mini">{word}</span>'
+        mkt_rows.append(f'<div class="mrow"><span class="mlab">{_KIND_LABEL[kind]}</span>{val}</div>')
+    mkts = f'<div class="mkts">{"".join(mkt_rows)}</div>'
+
+    # ---- headline ----
+    if head:
+        kind, tier, what, edge = head
+        word, cls = _WORD[tier]
+        badge = f'<span class="verdict {cls}">{word} &middot; {_pretty(kind, what)}</span>'
+        body = _how(r, kind, tier, what, edge)
+        side = what.split(" to win")[0] if kind == "ML" else (what.split()[0] if kind == "SPREAD" else None)
+        if side and side != fav0:
+            body += (f'<div class="also">We still expect the <b>{nick(fav0)}</b> to win '
+                     f'({fav_p*100:.0f}%); this is a price bet on the {nick(side)}, not a pick.</div>')
     elif v.startswith("STALE"):
-        tier, badge = "stale", '<span class="verdict v-caut">PRICE STALE &middot; re-check</span>'
+        tier = "stale"
+        badge = '<span class="verdict v-caut">PRICE STALE &middot; re-check</span>'
         body = ('<div class="how">The price we saw is too old to act on. Open Kalshi and look '
                 'before you buy anything here.</div>')
-        also = ""
-    elif ml_line:
-        tier, badge = "risky", f'<span class="verdict v-caut">RISKY &middot; {nick(vside)} to win</span>'
-        body, also = ml_line, ""
     else:
-        tier, badge = "none", '<span class="verdict v-none">NO BET</span>'
-        body = ('<div class="how">The price is fair. Nothing here is worth buying today.</div>'
+        tier = "none"
+        badge = '<span class="verdict v-none">NO BET</span>'
+        body = ('<div class="how">Every price is fair. Nothing here is worth buying today.</div>'
                 if has_price else '<div class="how">No price on Kalshi yet.</div>')
-        also = ""
     if abs(fav_p - 0.5) < 0.005:
         who = '<div class="who">Who we think wins: <b>too close to call</b></div>'
     else:
-        who = (f'<div class="who">Who we think wins: <b>{nick(fav0)}</b> '
-               f'({fav_p*100:.0f}% chance)</div>')
+        who = f'<div class="who">Who we think wins: <b>{nick(fav0)}</b> ({fav_p*100:.0f}% chance)</div>'
 
-    # ---- details: everything numerical ----
+    # ---- details ----
     d = []
-    if tot_bet and ml_line:
-        d.append(ml_line)
+    for kind, f in flags.items():
+        if head and kind == head[0]:
+            continue
+        d.append(_how(r, kind, f[1], f[2], f[3]))
     d.append(f'<div class="gap">Model line: <b>{fav_line(mu, home, away)}</b> &plusmn;{sg:.1f} runs '
              f'&middot; fair moneyline {american(fav_p)}</div>')
     d.append(f'<div class="gap">Starters: {r.get("away_sp") or "TBD"} ({A}) vs '
@@ -229,9 +248,11 @@ def game_card(r):
         d.append(f'<div class="bars">{bars}</div>'
                  f'<div class="gap">Both bars: chance the <b>{nick(focus)}</b> win. '
                  f'Gap: <b>{(pf-mk_focus)*100:+.0f}</b> points{agetxt}</div>')
-        if vside:
-            v_model = pm if vside == home else 1 - pm
-            v_mkt = mk if vside == home else (float(mk_a) if _num(mk_a) else 1 - mk)
+        mlf = flags.get("ML")
+        if mlf:
+            side = mlf[2].split(" to win")[0]
+            v_model = pm if side == home else 1 - pm
+            v_mkt = mk if side == home else (float(mk_a) if _num(mk_a) else 1 - mk)
             z = square3_gap(v_model, v_mkt)
             if z > SQUARE3_SIGMAS:
                 d.append(f'<div class="gap sq3">Model and market are about <b>{z*sg:.1f}</b> runs apart '
@@ -239,6 +260,17 @@ def game_card(r):
                          f'means the model has not seen some news; check lineups before acting.</div>')
     else:
         d.append(f'<div class="bars">{bars}</div><div class="gap">Kalshi has not opened this game yet.</div>')
+    if _num(r.get("p_home_cover")):
+        ph_c, pa_c = float(r["p_home_cover"]), float(r["p_away_cover"])
+        q = []
+        if _num(r.get("mkt_sp_home")):
+            q.append(f"{H} -1.5 at {_cents(r['mkt_sp_home'])}")
+        if _num(r.get("mkt_sp_away")):
+            q.append(f"{A} -1.5 at {_cents(r['mkt_sp_away'])}")
+        d.append(f'<div class="gap">Run line: model has {H} -1.5 covering {ph_c*100:.0f}%, '
+                 f'{A} -1.5 covering {pa_c*100:.0f}%'
+                 + (f' &middot; Kalshi: {", ".join(q)}' if q else " &middot; no Kalshi quote") + '</div>')
+    mt = r.get("mu_total")
     if _num(mt):
         wx = (" &middot; roof closed" if r.get("roof_closed") in (True, 1, 1.0, "True")
               else (f' &middot; {int(float(r["temp_f"]))}&deg;F at first pitch' if _num(r.get("temp_f")) else ""))
@@ -250,24 +282,18 @@ def game_card(r):
             po = float(po)
             lean, p = ("Over", po) if po >= 0.5 else ("Under", 1 - po)
             mo = r.get(f"mkt_over_{ln:g}")
-            mtxt = ""
-            if _num(mo):
-                mtxt = f" (Kalshi {(float(mo) if lean == 'Over' else 1 - float(mo))*100:.0f}%)"
+            mtxt = f" (Kalshi {(float(mo) if lean == 'Over' else 1 - float(mo))*100:.0f}%)" if _num(mo) else ""
             ladder.append(f'{lean} {ln:g}: {p*100:.0f}%{mtxt}')
         d.append(f'<div class="gap">Total runs: model expects <b>{float(mt):.1f}</b>{wx}'
                  + (f' &middot; {" &middot; ".join(ladder)}' if ladder else "") + '</div>')
-        if tot_bet and _num(mt):
-            model_side = "Over" if float(mt) > ln else "Under"
-            if model_side != what.split()[0]:
+        tf = flags.get("TOTAL")
+        if tf:
+            direction, ln, _ = tf[2].split()
+            model_side = "Over" if float(mt) > float(ln) else "Under"
+            if model_side != direction:
                 d.append(f'<div class="gap">Note: the model\'s own runs number ({float(mt):.1f}) leans '
-                         f'{model_side}; the bet is {what.split()[0]} because that side is the one '
+                         f'{model_side}; the call is {direction} because that side is the one '
                          f'Kalshi has mispriced.</div>')
-    if _num(r.get("p_home_cover")):
-        ph_c, pa_c = float(r["p_home_cover"]), float(r["p_away_cover"])
-        side, p = ((home, ph_c) if ph_c >= pa_c else (away, pa_c))
-        d.append(f'<div class="gap">Run line (&plusmn;1.5): model has {nick(side)} -1.5 covering {p*100:.0f}% '
-                 f'&middot; <span style="opacity:.7">not a bet: this market lost 40&ndash;44% of '
-                 f'covers this season</span></div>')
     if r.get("note"):
         d.append(f'<div class="gap"><i>Narrative: {r["note"]}</i></div>')
     details = f'<details class="why"><summary>Details</summary>{"".join(d)}</details>'
@@ -275,7 +301,7 @@ def game_card(r):
     kick = str(r.get("kick_iso") or "")
     return (f'<div class="card tier-{tier}" data-teams="{away}@{home}"><div class="match"><span class="teams">{A} at {H}</span>'
             f'<span class="date" data-kick="{kick}">{r["date"]}</span></div>'
-            f'<div class="leadv">{badge}</div>{body}{also}{who}{details}</div>')
+            f'<div class="leadv">{badge}</div>{body}{mkts}{who}{details}</div>')
 
 
 def build_parlays(rows, top_n=10):
@@ -343,7 +369,8 @@ def live_performance_html():
     roi = 100 * pnl / staked if staked else 0.0
     # Moneyline and totals are different markets with different records;
     # one blended number hid that. Totals is the market worth watching.
-    t["kind"] = np.where(t["market"].astype(str).str.upper() == "ML", "Moneyline", "Totals")
+    mk = t["market"].astype(str).str.upper()
+    t["kind"] = np.select([mk == "ML", mk == "SPREAD"], ["Moneyline", "Spread"], "Totals")
     by_kind = "".join(
         f'<tr><td>{k}</td><td>{len(g)}</td><td>{int(g.won.sum())}-{len(g)-int(g.won.sum())}</td>'
         f'<td>{"+" if g.pnl.sum() >= 0 else ""}${g.pnl.sum():.2f}</td>'
@@ -609,14 +636,16 @@ def render(slate, today, health=None):
 
 <div id="mweek" class="panel on">
 <h2>Today's Slate</h2>
-<p class="sub">Three words. <b style="color:var(--green)">BET</b> is a bet we would make
-today. A market earns that word from its own record, not from us: at least
-{labels.MIN_BETS} settled bets, profitable overall and over the most recent half.
+<p class="sub">Three markets on every card, same order every time: <b>Moneyline</b> (who
+wins), <b>Run line</b> (wins by 2 or more, or loses by no more than 1), <b>Total runs</b>
+(over or under a number). Each gets one of three words. <b style="color:var(--green)">BET</b>
+is a bet we would make today; a market earns that word from its own record, not from us:
+at least {labels.MIN_BETS} settled bets, profitable overall and over the most recent half.
 <b style="color:var(--yellow)">RISKY</b> means the model thinks something is cheaper than
-it should be, in a market that has not earned it. Picking a team to win
-{labels.record_phrase("ML")}. Betting total runs {labels.record_phrase("TOTAL")}.
-<b>NO BET</b> means the price is fair. Tap <b>Details</b> on any card for the numbers.
-Always check the lineup before you buy: the model cannot see a late scratch.</p>
+it should be, in a market that has not earned it. <b>NO BET</b> means the price is fair.
+Records so far: picking a team to win {labels.record_phrase("ML")}; the run line
+{labels.record_phrase("SPREAD")}; total runs {labels.record_phrase("TOTAL")}. Tap
+<b>Details</b> on any card for the numbers. Check the lineup before you buy.</p>
 {tiers}
 <div class="grid">{cards}</div>
 </div>

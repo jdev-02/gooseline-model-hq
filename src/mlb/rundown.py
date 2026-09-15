@@ -270,6 +270,15 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
         tot_prices = live_prices("KXMLBTOTAL", mlb_total_key) if use_live_prices else {}
         if not tot_prices:
             tot_prices = latest_prices(db_path, "KXMLBTOTAL", mlb_total_key)
+    # The run line is the third market, priced against Kalshi's actual
+    # "wins by over 1.5 runs" contracts, logged and paper-traded like the
+    # other two. It used to be a probability on the card with no price and
+    # no record -- which is how "the model went 5-1 on the spread" could be
+    # said and never checked.
+    from src.core.kalshi import mlb_spread_key, spread_sides
+    sp_prices = live_prices("KXMLBSPREAD", mlb_spread_key) if use_live_prices else {}
+    if not sp_prices:
+        sp_prices = latest_prices(db_path, "KXMLBSPREAD", mlb_spread_key)
 
     rows = []
     for j, r in enumerate(up.itertuples(index=False)):
@@ -313,6 +322,24 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
                 best, side = max((e_h, r.home_team), (e_a, r.away_team))
                 rec[ek] = round(float(best), 3)
                 rec[vk] = verdict_for(best, side, age)
+        sq = sp_prices.get((str(r.gameday.date()), r.away_team, r.home_team, int(r.game_number)), {})
+        rec["mkt_sp_home"] = (sq.get(f"{r.home_team}:{RUN_LINE:g}") or {}).get("ask")
+        rec["mkt_sp_home_bid"] = (sq.get(f"{r.home_team}:{RUN_LINE:g}") or {}).get("bid")
+        rec["mkt_sp_away"] = (sq.get(f"{r.away_team}:{RUN_LINE:g}") or {}).get("ask")
+        rec["mkt_sp_away_bid"] = (sq.get(f"{r.away_team}:{RUN_LINE:g}") or {}).get("bid")
+        sides = spread_sides(sq, r.home_team, r.away_team, RUN_LINE,
+                             rec["p_home_cover"], rec["p_away_cover"])
+        best_s = None
+        for call, p_s, cost in sides:
+            e_s = p_s - cost - kalshi_fee(cost)
+            if best_s is None or e_s > best_s[0]:
+                best_s = (e_s, call, cost, p_s)
+        if best_s is not None:
+            rec["spread_edge"] = round(float(best_s[0]), 3)
+            rec["spread_price"] = round(float(best_s[2]), 3)
+            rec["spread_p"] = round(float(best_s[3]), 3)
+            rec["spread_call"] = (best_s[1] if best_s[0] > edge_threshold
+                                  else f"no edge (best {best_s[1]})")
         t = totals.get(r.game_pk)
         if t:
             rec["mu_total"] = t["mu_total"]

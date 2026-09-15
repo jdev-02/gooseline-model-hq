@@ -315,6 +315,25 @@ def rundown(games_path="data/nfl/games.csv", stats_path="data/nfl/team_game_stat
         price_source = "live" if prices else "snapshot log"
     if not prices:
         prices = latest_prices(db_path)
+    # Spread: priced against Kalshi's "wins by over X.5" contracts at the
+    # rung nearest the Vegas line, logged and paper-traded like the
+    # moneyline. Live, then the snapshot log.
+    from src.core.kalshi import live_prices as _lp, latest_prices as _latest, nfl_spread_key, spread_sides
+    sp_prices = _lp("KXNFLSPREAD", nfl_spread_key) if use_live_prices else {}
+    if not sp_prices:
+        sp_prices = _latest(db_path, "KXNFLSPREAD", nfl_spread_key) if db_path and os.path.exists(db_path) else {}
+
+    def _spread_quotes(away, home):
+        from src.core.teams import aliases
+        for a in aliases("nfl", away):
+            for h in aliases("nfl", home):
+                q = sp_prices.get(f"{a}{h}")
+                if q:
+                    # re-key the team half of "TEAM:line" back to our codes
+                    return {(k.replace(a + ":", away + ":") if k.startswith(a + ":")
+                             else k.replace(h + ":", home + ":") if k.startswith(h + ":") else k): v
+                            for k, v in q.items()}
+        return {}
     now = pd.Timestamp.now(tz="UTC")
     out = []
     for j, row in enumerate(upcoming.itertuples(index=False)):
@@ -375,6 +394,30 @@ def rundown(games_path="data/nfl/games.csv", stats_path="data/nfl/team_game_stat
                 rec["edge"] = round(p_home[j] - hp["ask"] - kalshi_fee(hp["ask"]), 3) \
                     if hp and hp.get("ask") is not None else None
                 rec["verdict"] = "pass"
+        # ---- spread ----
+        sl = rec.get("spread_line")
+        if sl is not None and not pd.isna(sl) and abs(float(sl)) > 0:
+            sl = float(sl)
+            # Kalshi rungs are X.5; take the one nearest the Vegas line
+            # (a whole-number line rounds down, the more conservative rung).
+            rung = float(int(abs(sl))) + 0.5 if abs(sl) % 1 == 0 else abs(sl)
+            if abs(sl) % 1 == 0:
+                rung = max(0.5, abs(sl) - 0.5)
+            sq = _spread_quotes(row.away_team, row.home_team)
+            p_hc = float(norm_cdf((mu[j] - rung) / sigma[j]))        # home wins by > rung
+            p_ac = float(norm_cdf((-mu[j] - rung) / sigma[j]))       # away wins by > rung
+            best_s = None
+            for call, p_s, cost in spread_sides(sq, row.home_team, row.away_team, rung, p_hc, p_ac):
+                e_s = p_s - cost - kalshi_fee(cost)
+                if best_s is None or e_s > best_s[0]:
+                    best_s = (e_s, call, cost, p_s)
+            rec["spread_rung"] = rung
+            if best_s is not None:
+                rec["spread_edge"] = round(best_s[0], 3)
+                rec["spread_price"] = round(best_s[2], 3)
+                rec["spread_p"] = round(best_s[3], 3)
+                rec["spread_call"] = (best_s[1] if best_s[0] > edge_threshold
+                                      else f"no edge (best {best_s[1]})")
         out.append(rec)
 
     # Deterministic slate order: kickoff instant, then away, then home.

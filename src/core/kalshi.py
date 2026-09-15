@@ -293,6 +293,73 @@ def mlb_event_key(event_ticker, market_ticker):
     return (ev["date"], ev["away"], ev["home"], ev["game_number"]), team
 
 
+MLB_SPREAD_RE = re.compile(
+    r"^KXMLBSPREAD-(\d{2}[A-Z]{3}\d{2})(\d{4})([A-Z]+?)(?:G(\d))?$")
+NFL_SPREAD_RE = re.compile(r"^KXNFLSPREAD-(\d{2}[A-Z]{3}\d{2})([A-Z]+)$")
+_SPREAD_SUFFIX = re.compile(r"^([A-Z]+?)(\d+)$")
+
+
+def _spread_sub(market_ticker):
+    """'...-TEX2' -> ('TEX', '1.5'): the team and the 'wins by over' line."""
+    m = _SPREAD_SUFFIX.match((market_ticker or "").rsplit("-", 1)[-1])
+    if not m:
+        return None
+    return m.group(1), f"{int(m.group(2)) - 0.5:g}"
+
+
+def mlb_spread_key(event_ticker, market_ticker):
+    """parse_event callback for KXMLBSPREAD ("Texas wins by over 1.5 runs").
+
+    {(date, away, home, game_no): {"TEX:1.5": {bid, ask}, "BOS:1.5": ...}}.
+    Betting a side at +1.5 is the NO of the other team's -1.5 contract, so
+    its cost is 1 minus that contract's YES bid; both quotes are kept."""
+    m = MLB_SPREAD_RE.match(event_ticker or "")
+    if not m:
+        return None
+    d, hhmm, pair, gnum = m.groups()
+    sub = _spread_sub(market_ticker)
+    if not sub:
+        return None
+    teams = split_mlb_pair(pair, sub[0])
+    if not teams:
+        return None
+    date = f"20{d[:2]}-{_MONTHS[d[2:5]]:02d}-{d[5:]}"
+    return (date, teams[0], teams[1], int(gnum) if gnum else 1), f"{sub[0]}:{sub[1]}"
+
+
+def nfl_spread_key(event_ticker, market_ticker):
+    """parse_event callback for KXNFLSPREAD; keyed by the raw pair string the
+    NFL rundown already uses for moneylines ('NYGLAR')."""
+    m = NFL_SPREAD_RE.match(event_ticker or "")
+    if not m:
+        return None
+    sub = _spread_sub(market_ticker)
+    if not sub:
+        return None
+    return m.group(2), f"{sub[0]}:{sub[1]}"
+
+
+def spread_sides(quotes, home, away, line, p_home_cover, p_away_cover):
+    """Price the four ways to bet one spread line, given the two 'wins by
+    over' quotes and the model's two cover probabilities.
+
+    Returns [(call, p_model, cost), ...]. A -line side costs its own YES ask;
+    a +line side is the NO of the opponent's -line contract and costs 1
+    minus that contract's YES bid."""
+    qh = (quotes or {}).get(f"{home}:{line:g}") or {}
+    qa = (quotes or {}).get(f"{away}:{line:g}") or {}
+    out = []
+    if qh.get("ask") is not None:
+        out.append((f"{home} -{line:g}", p_home_cover, float(qh["ask"])))
+    if qa.get("ask") is not None:
+        out.append((f"{away} -{line:g}", p_away_cover, float(qa["ask"])))
+    if qa.get("bid") is not None:
+        out.append((f"{home} +{line:g}", 1 - p_away_cover, 1 - float(qa["bid"])))
+    if qh.get("bid") is not None:
+        out.append((f"{away} +{line:g}", 1 - p_home_cover, 1 - float(qh["bid"])))
+    return out
+
+
 MLB_TOTAL_RE = re.compile(
     r"^KXMLBTOTAL-(\d{2}[A-Z]{3}\d{2})(\d{4})([A-Z]+?)(?:G(\d))?$")
 
