@@ -26,6 +26,8 @@ jobs:
         with:
           python-version: "3.11"
       - run: uv sync --no-dev --extra torch
+      - name: tests
+        run: uv sync --extra dev --extra torch && uv run pytest -q
       - name: refresh games.csv from nflverse
         # This was missing entirely: the NFL side ran on games.csv frozen at
         # fork time with zero 2026 results in it, ever, on every game already

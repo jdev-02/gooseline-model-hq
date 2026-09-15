@@ -30,6 +30,8 @@ jobs:
         with:
           python-version: "3.11"
       - run: uv sync --no-dev --extra torch   # NFL site fits the deep ensemble
+      - name: tests
+        run: uv sync --extra dev --extra torch && uv run pytest -q
       - name: refresh current season schedule and games.csv
         run: |
           uv run python ops/backfill_mlb.py --schedule --seasons 2026 --force

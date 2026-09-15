@@ -1,0 +1,29 @@
+name: tests
+
+# Every push and pull request runs the suite. Until 2026-09-15 nothing in CI
+# did, and a commit with a failing pricing test landed on main -- the gate
+# the daily runs now also apply before they price anything.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "data/**"
+      - "docs/index.html"
+      - "figures/**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+      - run: uv sync --extra dev
+      - run: uv run pytest -q
