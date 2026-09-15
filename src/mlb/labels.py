@@ -138,14 +138,19 @@ def market_flags(row):
 
 
 _RANK = {"bet": 2, "risky": 1}
+_ORDER = {"ML": 0, "SPREAD": 1, "TOTAL": 2}
 
 
 def headline(row):
-    """The one flag that leads the card: highest tier, then highest edge."""
+    """The one flag that leads the card: the highest word, and among equals
+    the first line in the card's fixed order (Moneyline, Run line, Total).
+    It used to be the largest edge, so the badge could say "Over 9.5" while
+    the first line under it read "Moneyline"; the badge now always matches
+    the first line that carries its word. The edges are on the lines."""
     fl = market_flags(row)
     if not fl:
         return None
-    return max(fl, key=lambda f: (_RANK.get(f[1], 0), f[3]))
+    return max(fl, key=lambda f: (_RANK.get(f[1], 0), -_ORDER.get(f[0], 9)))
 
 
 def tier_for(row):

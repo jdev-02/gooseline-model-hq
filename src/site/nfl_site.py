@@ -484,7 +484,9 @@ def game_card(r):
     mk_h, mk_a = r.get("mkt_home"), r.get("mkt_away")
     has_price = _num(mk_h)
     flags = {f[0]: f for f in _nfl_flags(r)}
-    head = max(flags.values(), key=lambda f: f[2]) if flags else None
+    # Headline follows the card's fixed order (Moneyline, then Spread), not
+    # the larger edge, so the badge always matches the first flagged line.
+    head = next((flags[k] for k in ("ML", "SPREAD") if k in flags), None)
 
     rows = []
     for kind, lab in (("ML", "Moneyline"), ("SPREAD", "Spread"), ("TOTAL", "Total")):
