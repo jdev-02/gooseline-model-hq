@@ -194,6 +194,9 @@ nav button.on:hover{color:#08120b}
   text-transform:uppercase;letter-spacing:.04em}
 .why[open] summary{margin-bottom:2px}
 .v-high{background:var(--green);color:#08120b}
+/* A disagreement with the price, stated as such: neutral, not green. Green
+   would claim value the moneyline record contradicts (docs/baselines.md). */
+.v-dis{background:none;border:1px solid var(--white);color:var(--white)}
 .v-caut{background:var(--yellow);color:#141005}
 .v-avoid{background:none;border:1px solid var(--red);color:var(--red)}
 .v-none{background:none;border:1px solid var(--dim);color:var(--dim)}
@@ -328,11 +331,14 @@ own opinion so the two can genuinely disagree.</p>
 <p><b>From margin to money.</b> A predicted margin plus its uncertainty gives the
 chance of any outcome: the chance the margin beats zero is the moneyline, the
 chance it beats the spread is the cover probability. A market price is also a
-probability, since 65 cents means 65%. Value exists only when the model's number
-and the price disagree by more than the fees, in a game where the room agrees.
-Most weeks that is a short list. That is the design working, not failing.</p>
+probability, since 65 cents means 65%. A disagreement exists when the model's
+number and the price differ by more than the fees. Whether a disagreement is
+<i>value</i> is an empirical question, and the answer so far is no: over five
+walk-forward seasons the market was right more often than the model whenever they
+differed (Track Record). The disagreements are shown because that is what the
+model produces; the record is shown next to them because that is what happened.</p>
 <p><b>What this model honestly cannot see.</b> Injuries announced this week,
-coaches resting starters, weather. Every green badge gets a human news check before
+coaches resting starters, weather. Every flag gets a human news check before
 anything happens. When the market disagrees with the model, the market is usually
 right; this system exists to find the exceptions and to know the difference.</p>
 </div>"""
@@ -350,15 +356,25 @@ def ats_label(x):
     return f"{x.ats_pick} {line} &middot; {res}"
 
 
-def verdict_badge(v):
+def verdict_badge(v, edge=None):
+    """Display label only; the stored verdict strings are unchanged (the log
+    and the paper trade parse them). "HIGH VALUE" in green claimed something
+    the record contradicts: moneyline flags lost 12% over five walk-forward
+    seasons and the ensemble 17% (docs/baselines.md). What the model
+    actually produces is a disagreement with the price, so that is the word,
+    in a neutral colour."""
+    v = str(v)
+    e = "" if edge is None or pd.isna(edge) else f" &middot; {float(edge)*100:+.1f}%"
     if v.startswith("STALE"):
         return f'<span class="verdict v-caut">{v}</span>'
     if v.startswith("HIGH VALUE"):
-        return f'<span class="verdict v-high">{v}</span>'
+        side = v.split("&mdash;")[-1].strip()
+        return f'<span class="verdict v-dis">Model disagrees &middot; {side}{e}</span>'
     if v.startswith("CAUTIOUS"):
-        return f'<span class="verdict v-caut">{v}</span>'
+        side = v.split("&mdash;")[-1].strip().replace("small edge on ", "")
+        return f'<span class="verdict v-none">Small disagreement &middot; {side}{e}</span>'
     if v.startswith("NO VALUE"):
-        return f'<span class="verdict v-avoid">{v}</span>'
+        return '<span class="verdict v-none">Price is fair &middot; no bet</span>'
     return '<span class="verdict v-none">No price yet</span>'
 
 
@@ -467,7 +483,7 @@ def game_card(r):
                  f'{why}</details>' if why else "")
     return (f'<div class="card"><div class="match"><span class="teams">{r["away"]} @ '
             f'{r["home"]}</span><span class="date">{r["date"]}</span></div>'
-            f'<div class="leadv">{verdict_badge(v)}</div>{disambig}'
+            f'<div class="leadv">{verdict_badge(v, r.get("edge"))}</div>{disambig}'
             f'<div class="call">{call}</div><div class="gline">{gline}</div>'
             f'<div class="bars">{model_bar}{mkt_bar}</div>{gaptxt}{why_block}</div>')
 def health_strip(today, health_path="data/nfl/health.json"):
@@ -595,6 +611,7 @@ def build_site(out_path="site.html", games_path="data/nfl/games.csv",
                           if ap and ap.get("ask") is not None else -1)
                     best = max(e, ea)
                     side = row.home_team if e >= ea else row.away_team
+                    rec["edge"] = best
                     if best > edge_threshold:
                         rec["verdict"] = f"HIGH VALUE &mdash; {side}"
                     elif best > 0:
@@ -664,12 +681,15 @@ def build_site(out_path="site.html", games_path="data/nfl/games.csv",
 
 <div id="week" class="panel on">
 <h2>This Week</h2>
-<p class="sub">Green bar: the Bayesian Model's chance the home team wins. White
-bar: what the market charges for that outcome. Badges: green means real value
-after fees, yellow means an edge too small to trust, red means the price is fair
-or worse. Each card also grades the Vegas spread: the model's chance of covering
-each side, and whether that beats the 52.4% needed to profit at a standard -110.
-Every green light still gets a human news check first.</p>
+<p class="sub">Each card shows where the model and the market disagree, and by how
+much. <b>Model disagrees</b> means the model prices that side higher than Kalshi
+does, after fees. It is not a prediction that the side wins: when the two differ,
+the card says which team the model actually expects to win. <b>The record:</b>
+walked forward over 2021&ndash;2025, betting every such disagreement lost 12%
+(871 bets), and the spread pick covered 49.2% against a 52.4% breakeven
+(docs/baselines.md). The model picks winners well; the market's price already
+knows that. Green bar: the model's chance the home team wins. White bar: the
+market's price for that. Every flag still gets a human news check.</p>
 {week_note}{price_age}<div class="grid">{cards}</div>
 </div>
 
@@ -717,7 +737,11 @@ using that era. Two separate report cards: Both scorecards below belong to the B
 Model, never to Vegas: "winner pick" is the model picking the game outright, and
 "spread pick" is the model's chosen side against the Vegas closing line (the pick
 is spelled out in each row, for example "LAC +3"). 52.4% against the spread is
-break-even at standard juice.</p>
+break-even at standard juice. <b>Read both columns against the market, not against
+a coin flip:</b> picking 64% of winners is real skill and is not a betting edge,
+because the market's price already contains it. Paper-traded against the closing
+moneyline the disagreements lost 12%; against the spread the model covered 49.2%.
+These are report cards on the model's knowledge, not bets.</p>
 <table><tr><th>Season</th><th>Games</th><th>Bayesian Model picks winner</th>
 <th>Model vs the spread</th><th>Avg miss (pts)</th></tr>{srows}</table>
 <p class="sub">Honesty check. Everything in this table is from the home team's
@@ -740,7 +764,7 @@ confidence is honest.</p>
 <h2>Bayesian 101</h2>{B101}
 </div>
 
-<footer>One model, honestly uncertain. Nothing here is financial advice.</footer>
+<footer>Every number here states its own uncertainty. Informational only.</footer>
 </div></body></html>"""
     import os
     d = os.path.dirname(out_path)

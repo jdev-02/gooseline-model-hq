@@ -123,7 +123,9 @@ had not seen the game, and the track record shows the misses next to the hits.
 <br><br>
 <b>What this is not.</b> It is not a betting service, a tipsheet, or a product.
 There is nothing to buy, no picks for sale, and no sportsbook links anywhere on
-this page. When the model has no edge it says so, which is most nights.
+this page. Where the model and the market disagree, the page says so and shows the
+record of acting on that disagreement, which so far favours the market on moneylines
+and is undecided on totals.
 </div>
 </div>
 """

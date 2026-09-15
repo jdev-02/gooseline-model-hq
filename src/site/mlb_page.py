@@ -47,16 +47,28 @@ def img_tag(path):
     return f'<img class="fig" src="data:image/png;base64,{b}" alt="{p.stem}">'
 
 
-def verdict_badge(v):
+def verdict_badge(v, edge=None):
+    """Display label for the moneyline verdict. The stored strings
+    ("HIGH VALUE", "CAUTIOUS", "NO VALUE") are unchanged -- the log, the
+    paper trade and the health gate parse them -- only what a reader sees
+    changes. "HIGH VALUE" in green claimed something the record contradicts:
+    moneyline flags have lost about 20% against Kalshi since 2026-08-27
+    (docs/baselines.md). What the model actually produces is a
+    *disagreement* with the price, so that is the word, in a neutral colour.
+    Green is reserved for the totals call, the one market Kalshi has not
+    been shown to beat."""
     v = str(v)
+    e = "" if edge is None or pd.isna(edge) else f" &middot; {float(edge)*100:+.1f}%"
     if v.startswith("STALE"):
         return f'<span class="verdict v-caut">{v}</span>'
     if v.startswith("HIGH VALUE"):
-        return f'<span class="verdict v-high">{v}</span>'
+        side = v.split("&mdash;")[-1].strip()
+        return f'<span class="verdict v-dis">Model disagrees &middot; {side}{e}</span>'
     if v.startswith("CAUTIOUS"):
-        return f'<span class="verdict v-caut">{v}</span>'
+        side = v.split("&mdash;")[-1].strip().replace("small edge on ", "")
+        return f'<span class="verdict v-none">Small disagreement &middot; {side}{e}</span>'
     if v.startswith("NO VALUE"):
-        return f'<span class="verdict v-avoid">{v}</span>'
+        return '<span class="verdict v-none">Price is fair &middot; no bet</span>'
     return '<span class="verdict v-none">No price yet</span>'
 
 
@@ -273,7 +285,7 @@ def game_card(r):
 
     return (f'<div class="card"><div class="match"><span class="teams">{r["away"]} @ '
             f'{r["home"]}</span><span class="date">{r["date"]}</span></div>'
-            f'<div class="leadv">{verdict_badge(v)}</div>{disambig}'
+            f'<div class="leadv">{verdict_badge(v, r.get("edge"))}</div>{disambig}'
             f'<div class="call">{call}</div><div class="gline">{gline}</div>{sp}'
             f'<div class="bars">{model_bar}{narr_bar}{mkt_bar}</div>'
             f'{gaptxt}{tot_row}{why_block}</div>')
@@ -336,6 +348,14 @@ def live_performance_html():
     n, wins = len(t), int(t["won"].sum())
     staked, pnl = t["stake"].sum(), t["pnl"].sum()
     roi = 100 * pnl / staked if staked else 0.0
+    # Moneyline and totals are different markets with different records;
+    # one blended number hid that. Totals is the market worth watching.
+    t["kind"] = np.where(t["market"].astype(str).str.upper() == "ML", "Moneyline", "Totals")
+    by_kind = "".join(
+        f'<tr><td>{k}</td><td>{len(g)}</td><td>{int(g.won.sum())}-{len(g)-int(g.won.sum())}</td>'
+        f'<td>{"+" if g.pnl.sum() >= 0 else ""}${g.pnl.sum():.2f}</td>'
+        f'<td>{(100*g.pnl.sum()/g.stake.sum() if g.stake.sum() else 0):+.1f}%</td></tr>'
+        for k, g in t.groupby("kind"))
 
     rows = "".join(
         f'<tr><td>{x.date}</td><td>{x.market}</td><td>{x.pick}</td>'
@@ -359,6 +379,7 @@ until this has run for a full season.</p>
 <div class="mrow"><span class="mn">${pnl:+.2f}</span><span class="ml">P&amp;L on ${staked:.0f} staked</span></div>
 <div class="mrow"><span class="mn">{roi:+.1f}%</span><span class="ml">ROI</span></div>
 </div>
+<table><tr><th>By market</th><th>Bets</th><th>Record</th><th>P&amp;L</th><th>ROI</th></tr>{by_kind}</table>
 <table><tr><th>Date</th><th>Market</th><th>Pick</th><th>Price</th><th>Edge</th>
 <th>Result</th><th>P&amp;L</th><th>Running total</th></tr>{rows}</table>
 """
@@ -435,8 +456,12 @@ def track_record_html():
 Every prediction below was made by the Bayesian Model before it had seen the game:
 it refits weekly on games already played, exactly as it runs live. Two report cards:
 "winner pick" is the model picking the game outright, and "run-line pick" is its side
-at the standard &plusmn;1.5. Baseball is close to a coin flip most nights, so a winner
-percentage in the mid-fifties is a real edge, not a weak one.</p>
+at the standard &plusmn;1.5. <b>Read these against the market, not against a coin
+flip.</b> Picking the winner 55% of the time is real skill and is not a betting edge:
+the market picks winners at least as well, and its prices already contain that. The
+test that matters is the paper trade above, against Kalshi's actual price. On the run
+line the model covers 40&ndash;44% over 2023&ndash;2025 against a 53.5% breakeven, so
+that column is a report card, not a bet.</p>
 <table><tr><th>Season</th><th>Games</th><th>Model picks winner</th>
 <th>Model on the run line</th><th>Avg miss (runs)</th></tr>{srows}</table>
 <p class="sub">Honesty check. Take all the games where the model gave the home team a
@@ -461,13 +486,15 @@ measured, not assumed. Take every game since 2008, compare the final run differe
 the best pre-game prediction anyone can make, and the typical miss is about 4.4 runs.
 Vegas misses by about the same. Baseball is decided by a seeing-eye single, a checked
 swing, and a reliever who did not have it that night. The skill is not shrinking the 4.4;
-it is knowing your 4.4 honestly while the market prices as if it were smaller.</p>
-<p><b>Why baseball is harder than football.</b> An NFL model can separate two teams by
-two touchdowns. The best pre-game baseball model in the world separates almost every
-matchup by less than two runs, on a spread of four and a half. That is why nearly every
-card on This Week reads NO VALUE: the honest range dwarfs the edge, and the market
-already knows what the model knows. Finding three real disagreements a week is the
-job working, not failing.</p>
+it is knowing your 4.4 honestly.</p>
+<p><b>What the model has and has not shown.</b> On outcomes it is calibrated: when it
+says 60%, the home team wins about 60% of the time (the Honesty check on Track Record).
+Against the market it has not won: every disagreement it has with Kalshi's moneyline is
+"this game is closer than you think", and paper-traded since 2026-08-27 that has lost
+about 20%. The market is calibrated too, and it has information the model does not
+(lineups, injuries, weather at first pitch, the sharp money). The one market where the
+model has not been beaten is total runs, where temperature and park are inputs the model
+reads well. That is why the total gets a green badge and the moneyline gets a grey one.</p>
 <p><b>The Kalman filter: the model's memory.</b> Every club carries a rating, runs better
 or worse than average on a neutral field, updated after every game by a Kalman filter,
 the same math that navigated Apollo to the moon. The filter's genius is knowing how far
@@ -502,7 +529,7 @@ so an opinion can shift the number but can never buy confidence. Both the model-
 the model-plus-narrative calls are logged and scored separately, so whether the human
 helps is a number at the end of the season, not a feeling.</p>
 <p><b>What this model honestly cannot see.</b> A late scratch, three regulars resting in
-a day game after a night game, wind blowing out. Every green badge gets a human news
+a day game after a night game, wind blowing out. Every flag gets a human news
 check before anything happens. When the market disagrees with the model, the market is
 usually right; this system exists to find the exceptions and to know the difference.</p>
 </div>"""
@@ -567,17 +594,26 @@ def render(slate, today, health=None):
 
 <div id="mweek" class="panel on">
 <h2>Today's Slate</h2>
-<p class="sub">Green bar: the Bayesian Model's chance the home team wins. Faded green:
-the same after a human narrative tilt, when one was entered. White bar: what the market
-charges for that outcome. Badges: green means real value after fees, yellow means an
-edge too small to trust, red means the price is fair or worse. Each card also grades the
-run line. Every green light still gets a human news check first.</p>
+<p class="sub">Each card shows where the model and the market disagree, and by how much.
+<b>Model disagrees</b> means the model prices that side higher than Kalshi does, after
+fees. It is not a prediction that the side wins: when the two differ, the card says which
+team the model actually expects to win. <b>The record so far:</b> moneyline disagreements
+have lost about 20% against Kalshi since 2026-08-27 (Live Bet Performance, Track Record
+tab). The <b>total runs</b> call is the one market Kalshi has not been shown to beat, and
+the only one that gets a green badge. Green bar: the model's chance the home team wins.
+White bar: the market's price for that. Every flag still gets a human news check.</p>
 <div class="grid">{cards}</div>
 </div>
 
 <div id="mparlays" class="panel">
 <h2>Parlay Lab</h2>
-<p class="sub">Combinations of moneylines (at logged Kalshi prices, fees included) and
+<p class="sub"><b>Read this first.</b> Every leg here is a moneyline or run-line pick, the
+two markets where the model has lost against the market (moneyline about &minus;20%
+since 2026-08-27; run line 40&ndash;44% covers). The "avg profit" column is the model's
+own opinion of the combo, not a realized result, and a parlay multiplies each leg's
+shortfall along with the payout. This tab is here for transparency about what the model
+believes, not as a recommendation.
+Combinations of moneylines (at logged Kalshi prices, fees included) and
 run lines. Pick your risk appetite: <b>Safe</b> caps the payout near +120 and ranks by
 hit chance; these are legs where the model and the market mostly agree, so expect them to
 land often but carry little or no edge. <b>Balanced</b> and <b>Longshot</b> rank by the
