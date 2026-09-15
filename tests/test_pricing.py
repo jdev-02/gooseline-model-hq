@@ -66,9 +66,14 @@ def paper_pnl(stake, ask, won):
 def test_paper_pnl_arithmetic():
     assert paper_pnl(15.0, 0.50, True) == pytest.approx(15 / (0.5 + 0.0175) - 15)
     assert paper_pnl(15.0, 0.50, False) == -15.0
-    # A win at any price below $1 minus fee is a profit; at $1 it is not.
+    # A win is a profit exactly when ask + fee < $1. At 99c the fee is
+    # 0.07*0.99*0.01 = 0.0007, so a win still clears 14c on $15; at $1.00
+    # the contract pays what it cost. (First version of this test asserted a
+    # loss at 99c and was wrong -- the code was right.)
     assert paper_pnl(15.0, 0.10, True) > 0
-    assert paper_pnl(15.0, 0.99, True) < 0
+    assert paper_pnl(15.0, 0.99, True) == pytest.approx(15 / (0.99 + kalshi_fee(0.99)) - 15)
+    assert paper_pnl(15.0, 0.99, True) > 0
+    assert paper_pnl(15.0, 1.00, True) == pytest.approx(0.0)
 
 
 def test_break_even_win_rate_equals_price_plus_fee():
