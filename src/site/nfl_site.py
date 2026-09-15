@@ -7,6 +7,7 @@ from scipy.stats import norm
 import src.nfl.rundown as rd
 from src.nfl.features import FEATURE_COLS
 from src.core.walkforward import walk_forward
+from src.site.names import nfl as nick
 
 V3 = rd.V3_COLS
 SPREAD_JUICE = 1.909
@@ -191,6 +192,10 @@ nav button.on:hover{color:#08120b}
 .pnone{font-size:.85rem;font-weight:600;color:var(--dim)}
 .psmall{font-size:.7rem;font-weight:600;color:var(--dim)}
 .sq3{border-left:3px solid var(--yellow);padding-left:8px;color:var(--white)}
+.how{font-size:.9rem;margin:6px 0 4px;line-height:1.45}
+.how .warn{display:block;margin-top:4px;color:var(--yellow);font-size:.8rem}
+.who{font-size:.85rem;color:var(--dim);margin:2px 0 4px}
+.also{font-size:.8rem;color:var(--yellow);margin:2px 0}
 .tierbar{flex-wrap:wrap}
 .cnt{display:inline-block;margin-left:6px;padding:0 6px;border-radius:99px;
   background:rgba(255,255,255,.12);font-size:.7rem}
@@ -347,12 +352,12 @@ own opinion so the two can genuinely disagree.</p>
 <p><b>From margin to money.</b> A predicted margin plus its uncertainty gives the
 chance of any outcome: the chance the margin beats zero is the moneyline, the
 chance it beats the spread is the cover probability. A market price is also a
-probability, since 65 cents means 65%. A disagreement exists when the model's
-number and the price differ by more than the fees. Whether a disagreement is
-<i>value</i> is an empirical question, and the answer so far is no: over five
-walk-forward seasons the market was right more often than the model whenever they
-differed (Track Record). The disagreements are shown because that is what the
-model produces; the record is shown next to them because that is what happened.</p>
+probability, since 65 cents means 65%. A team looks cheap when the model's number
+and the price differ by more than the fees. Whether cheap means <i>worth buying</i>
+is an empirical question, and the answer so far is no: over five walk-forward
+seasons the market was right more often than the model whenever they differed
+(Track Record). Those games are shown as RISKY because that is what the model
+produces; the record is shown next to them because that is what happened.</p>
 <p><b>What this model honestly cannot see.</b> Injuries announced this week,
 coaches resting starters, weather. Every flag gets a human news check before
 anything happens. When the market disagrees with the model, the market is usually
@@ -413,151 +418,113 @@ def verdict_tier(v):
     return "nopr"
 
 
+def _num(x):
+    return x is not None and not pd.isna(x)
+
+
+def _cents(p):
+    return f"{float(p)*100:.0f}&cent;"
+
+
 def game_card(r):
+    """One card, for someone who has never placed a bet. RISKY or NO BET
+    only: nothing on the NFL side has a market it has beaten (moneyline
+    -12% over five walk-forward seasons, spread 49.2% vs 52.4% breakeven,
+    docs/baselines.md), so there is no BET tier here. Full team names;
+    every number under a Details tap."""
     mu, sigma, pm = r["mu"], r["sigma"], r["p_home"]
-    fav0 = r["home"] if pm >= 0.5 else r["away"]
+    home, away = r["home"], r["away"]
+    H, A = nick(home), nick(away)
+    fav0 = home if pm >= 0.5 else away
     fav_p = pm if pm >= 0.5 else 1 - pm
-    v = str(r["verdict"])
-    vside = ""
-    if "&mdash;" in v and (v.startswith("HIGH VALUE") or v.startswith("CAUTIOUS")):
-        vside = v.split("&mdash;")[-1].strip().replace("small edge on ", "")
-    has_price = r.get("mkt_home") is not None and not pd.isna(r.get("mkt_home"))
+    v = str(r.get("verdict", ""))
+    vside = v.split("&mdash;")[-1].strip() if ("&mdash;" in v and v.startswith("HIGH VALUE")) else ""
     edge = r.get("edge")
-    # Three labelled rows (David's layout): the model's line, who it thinks
-    # wins, and what is priced wrong -- separate questions on adjacent lines.
-    sl = r.get("spread_line")
-    has_sl = sl is not None and not pd.isna(sl)
-    lines = (f'<div class="lrow"><span class="llab">Model:</span> '
-             f'<span class="lval">{fav_line(mu, r["home"], r["away"])}</span> '
-             f'<span class="lnote">&plusmn;{sigma:.0f} &middot; fair ML {american(fav_p)}</span></div>'
-             f'<div class="lrow"><span class="llab">Vegas:</span> '
-             f'<span class="lval vval">{fav_line(sl, r["home"], r["away"]) if has_sl else "&mdash;"}</span></div>')
+    mk_h, mk_a = r.get("mkt_home"), r.get("mkt_away")
+    has_price = _num(mk_h)
+
+    if vside and has_price:
+        price = mk_h if vside == home else mk_a
+        ptxt = f" at <b>{_cents(price)}</b>" if _num(price) else ""
+        etxt = f" Edge {float(edge)*100:+.1f}% after fees." if _num(edge) else ""
+        still = (f" We still expect the <b>{nick(fav0)}</b> to win this game ({fav_p*100:.0f}%); "
+                 f"the {nick(vside)} are just cheaper than they should be." if vside != fav0 else "")
+        tier = "risky"
+        badge = f'<span class="verdict v-caut">RISKY &middot; {nick(vside)} to win</span>'
+        body = (f'<div class="how">Buy <b>{nick(vside)} to win</b>{ptxt} on Kalshi. It wins if the '
+                f'{nick(vside)} win.{etxt}{still} <span class="warn">Picking a team to win has lost '
+                f'12% over five seasons in testing (871 bets) &mdash; that is why this is marked '
+                f'risky, not a bet.</span></div>')
+    else:
+        tier, badge = "none", '<span class="verdict v-none">NO BET</span>'
+        body = ('<div class="how">The price is fair. Nothing here is worth buying this week.</div>'
+                if has_price else '<div class="how">No price on Kalshi yet.</div>')
     if abs(fav_p - 0.5) < 0.005:
-        ml_row = ('<div class="lrow"><span class="llab">Model picks:</span> '
-                  '<span class="lval">too close to call</span></div>')
+        who = '<div class="who">Who we think wins: <b>too close to call</b></div>'
     else:
-        ml_row = (f'<div class="lrow"><span class="llab">Model picks:</span> '
-                  f'<span class="lval">{fav0}</span> '
-                  f'<span class="lpct">to win <b>{fav_p*100:.0f}%</b> of the time</span></div>')
-    if vside:
-        e_txt = "" if edge is None or pd.isna(edge) else f" ({float(edge)*100:+.1f}%)"
-        small = "" if v.startswith("HIGH VALUE") else ' <span class="psmall">(small)</span>'
-        still = (f' <span class="psmall">&mdash; model still expects {fav0} to win</span>'
-                 if vside != fav0 else "")
-        dis_html = f'{vside} ML{e_txt}{small}{still}'
-    elif has_price:
-        dis_html = '<span class="pnone">None at current prices</span>'
-    else:
-        dis_html = '<span class="pnone">No market price yet</span>'
-    dis_row = (f'<div class="lrow"><span class="llab">Price disagreement:</span> '
-               f'<span class="lval plist">{dis_html}</span></div>')
-    # Both bars follow the model's favourite, the team the card is about.
+        who = f'<div class="who">Who we think wins: <b>{nick(fav0)}</b> ({fav_p*100:.0f}% chance)</div>'
+
+    d = []
+    sl = r.get("spread_line")
+    d.append(f'<div class="gap">Model line: <b>{fav_line(mu, home, away)}</b> &plusmn;{sigma:.0f} '
+             f'&middot; fair moneyline {american(fav_p)}'
+             + (f' &middot; Vegas line: {fav_line(sl, home, away)}' if _num(sl) else "") + '</div>')
     focus = fav0
-    pf = pm if focus == r["home"] else 1 - pm
-    model_bar = (f'<div class="brow"><span class="blab">Bayesian model</span>'
-                 f'<div class="btrack"><div class="bfill model" '
-                 f'style="width:{pf*100:.1f}%"></div></div>'
-                 f'<span class="bval">{pf*100:.0f}%</span></div>')
-    sq3_row = ""
+    pf = pm if focus == home else 1 - pm
+    bars = (f'<div class="brow"><span class="blab">Our model</span><div class="btrack">'
+            f'<div class="bfill model" style="width:{pf*100:.1f}%"></div></div>'
+            f'<span class="bval">{pf*100:.0f}%</span></div>')
     if has_price:
-        mk = float(r["mkt_home"])
-        ma = r.get("mkt_away")
-        mk_focus = mk if focus == r["home"] else (float(ma) if ma is not None and not pd.isna(ma) else 1 - mk)
-        gap = (pf - mk_focus) * 100
-        mkt_bar = (f'<div class="brow"><span class="blab">Market price</span>'
-                   f'<div class="btrack"><div class="bfill mkt" '
-                   f'style="width:{mk_focus*100:.1f}%"></div></div>'
-                   f'<span class="bval">{mk_focus*100:.0f}&cent;</span></div>')
-        gaptxt = (f'<div class="gap">Both bars: chance <b>{focus}</b> wins. '
-                  f'Disagreement: <b>{gap:+.0f}</b> points of probability '
-                  f'{"toward" if gap > 0 else "against"} {focus}</div>')
+        mk = float(mk_h)
+        mk_focus = mk if focus == home else (float(mk_a) if _num(mk_a) else 1 - mk)
+        bars += (f'<div class="brow"><span class="blab">Kalshi price</span><div class="btrack">'
+                 f'<div class="bfill mkt" style="width:{mk_focus*100:.1f}%"></div></div>'
+                 f'<span class="bval">{_cents(mk_focus)}</span></div>')
+        d.append(f'<div class="bars">{bars}</div><div class="gap">Both bars: chance the <b>{nick(focus)}</b> '
+                 f'win. Gap: <b>{(pf-mk_focus)*100:+.0f}</b> points</div>')
         if vside:
-            v_model = pm if vside == r["home"] else 1 - pm
-            v_mkt = mk if vside == r["home"] else (float(ma) if ma is not None and not pd.isna(ma) else 1 - mk)
+            v_model = pm if vside == home else 1 - pm
+            v_mkt = mk if vside == home else (float(mk_a) if _num(mk_a) else 1 - mk)
             z = square3_gap(v_model, v_mkt)
             if z > SQUARE3_SIGMAS:
-                sq3_row = (f'<div class="gap sq3">Model and market are about <b>{z*sigma:.0f}</b> points '
-                           f'apart here, against a typical miss of &plusmn;{sigma:.0f}. A gap that '
-                           f'size usually means the model has not seen some news; check injuries '
-                           f'and inactives before acting.</div>')
+                d.append(f'<div class="gap sq3">Model and market are about <b>{z*sigma:.0f}</b> points apart '
+                         f'here, against a typical miss of &plusmn;{sigma:.0f}. A gap that size usually '
+                         f'means the model has not seen some news; check injuries before acting.</div>')
     else:
-        mkt_bar = (f'<div class="brow"><span class="blab">Market price</span>'
-                   f'<div class="btrack"></div><span class="bval">&mdash;</span></div>')
-        gaptxt = '<div class="gap">Market has not opened this game yet</div>'
-    note = ""
-    fav = fav0
-    if has_price:
-        mkt_fav = r["home"] if float(r["mkt_home"]) >= 0.5 else r["away"]
-        if "&mdash;" in v and (v.startswith("HIGH VALUE") or v.startswith("CAUTIOUS")):
-            side = v.split("&mdash;")[-1].strip().replace("small edge on ", "").replace(" (underdog)", "")
-            soft = "" if v.startswith("HIGH VALUE") else                 " The edge is small, so treat this one lightly."
-            if side != fav:
-                pass  # already said, plainly and visibly, in `disambig` above
-            elif side == mkt_fav:
-                note = (f'For value: the model and the market agree <b>{side}</b> '
-                        f'is the likely winner, but the model is more confident '
-                        f'than the price implies. The value play is <b>{side}</b>.'
-                        + soft)
-            else:
-                note = (f'For value: the model calls an upset. It makes '
-                        f'<b>{side}</b> the favorite while the market does not, '
-                        f'so {side} comes cheap if the model is right. The value '
-                        f'play is <b>{side}</b>.' + soft)
-        elif v.startswith("NO VALUE"):
-            if fav == mkt_fav:
-                note = (f'The model and the market see this game the same way: '
-                        f'<b>{fav}</b> likely wins, and the price already says so. '
-                        f'Fair price, no bet.')
-            else:
-                note = (f'The model leans <b>{fav}</b> while the market leans '
-                        f'{mkt_fav}, but not by enough to beat the price after '
-                        f'fees. No bet.')
-        if note:
-            note = f'<div class="gap">{note}</div>'
-    # Spread, backtested at 49.2% against a 52.4% breakeven across five
-    # seasons -- dead, per docs/baselines.md -- so this never gets the
-    # "hit"/green styling the moneyline verdict uses: that styling means
-    # "this beat the market in testing," and the spread hasn't.
-    spread_row = ""
-    sl = r.get("spread_line")
-    if sl is not None and not pd.isna(sl):
+        d.append(f'<div class="bars">{bars}</div><div class="gap">Kalshi has not opened this game yet.</div>')
+    if _num(sl):
         p_ch = norm.cdf((mu - sl) / sigma)
-        side, p = ((r["home"], p_ch) if p_ch >= 0.5 else (r["away"], 1 - p_ch))
-        line = (f"-{abs(sl):g}" if (side == r["home"]) == (sl > 0)
-                else f"+{abs(sl):g}")
-        spread_row = (f'<div class="gap">Spread (Vegas: '
-                      f'{fav_line(sl, r["home"], r["away"])}): model covers '
-                      f'<b>{side} {line}</b> {p*100:.0f}% of the time &middot; '
-                      f'fair price {american(p)} &middot; '
-                      f'<span style="opacity:.7">not backtested as a bet '
-                      f'(five-season record: 49.2% vs. a 52.4% breakeven) -- '
-                      f'reference only</span></div>')
-    # The badge answers "what do I do" -- it used to sit last, after several
-    # lines of prose. It's first now, right under the matchup. The reasoning
-    # behind it and the spread (not a backtested bet) are real information,
-    # not clutter, so they stay on the card -- just collapsed, the same
-    # pattern the run-health strip uses.
-    why = "".join(x for x in (note, spread_row) if x)
-    why_block = (f'<details class="why"><summary>Why{" &middot; spread" if spread_row else ""}</summary>'
-                 f'{why}</details>' if why else "")
+        side, p = ((home, p_ch) if p_ch >= 0.5 else (away, 1 - p_ch))
+        line = f"-{abs(sl):g}" if (side == home) == (sl > 0) else f"+{abs(sl):g}"
+        d.append(f'<div class="gap">Spread: model covers {nick(side)} {line} {p*100:.0f}% of the time '
+                 f'&middot; <span style="opacity:.7">not a bet: 49.2% covers over five seasons against a '
+                 f'52.4% breakeven</span></div>')
+    details = f'<details class="why"><summary>Details</summary>{"".join(d)}</details>'
     kick = str(r.get("kick_iso") or "")
-    return (f'<div class="card tier-{verdict_tier(v)}"><div class="match"><span class="teams">{r["away"]} @ '
-            f'{r["home"]}</span><span class="date" data-kick="{kick}">{r["date"]}</span></div>'
-            f'<div class="leadv">{verdict_badge(v, r.get("edge"))}</div>'
-            f'{lines}{ml_row}{dis_row}'
-            f'<div class="bars">{model_bar}{mkt_bar}</div>{gaptxt}{sq3_row}{why_block}</div>')
+    return (f'<div class="card tier-{tier}"><div class="match"><span class="teams">{A} at {H}</span>'
+            f'<span class="date" data-kick="{kick}">{r["date"]}</span></div>'
+            f'<div class="leadv">{badge}</div>{body}{who}{details}</div>')
+
+
+def card_tier(r):
+    v = str(r.get("verdict", ""))
+    if v.startswith("HIGH VALUE") and r.get("mkt_home") is not None and not pd.isna(r.get("mkt_home")):
+        return "risky"
+    return "none"
 
 
 def tier_buttons(rows, scope):
     from collections import Counter
-    counts = Counter(verdict_tier(str(r.get("verdict", ""))) for r in rows)
-    spec = [("all", "All", len(rows)), ("high", "Disagreements", counts.get("high", 0)),
-            ("small", "Small", counts.get("small", 0)), ("none", "Fair price", counts.get("none", 0))]
+    counts = Counter(card_tier(r) for r in rows)
+    spec = [("all", "All games", len(rows)), ("risky", "Risky", counts.get("risky", 0)),
+            ("none", "No bet", counts.get("none", 0))]
     btns = "".join(
         f'<button id="tier-{scope}-{k}" class="bandbtn{" on" if k == "all" else ""}"'
         f'{"" if n or k == "all" else " disabled"} onclick="mtier(\'{k}\',\'{scope}\')">'
         f'{lab}<span class="cnt">{n}</span></button>' for k, lab, n in spec)
     return f'<div class="bandbar tierbar">{btns}</div>'
+
+
 def health_strip(today, health_path="data/nfl/health.json"):
     """Same purpose as the MLB page's strip (src/site/mlb_page.py): the run's
     own audit, above the first card, so a reader can trust a number before
@@ -768,15 +735,13 @@ def build_site(out_path="site.html", games_path="data/nfl/games.csv",
 
 <div id="week" class="panel on">
 <h2>This Week</h2>
-<p class="sub">Each card shows where the model and the market disagree, and by how
-much. <b>Model disagrees</b> means the model prices that side higher than Kalshi
-does, after fees. It is not a prediction that the side wins: when the two differ,
-the card says which team the model actually expects to win. <b>The record:</b>
-walked forward over 2021&ndash;2025, betting every such disagreement lost 12%
-(871 bets), and the spread pick covered 49.2% against a 52.4% breakeven
-(docs/baselines.md). The model picks winners well; the market's price already
-knows that. Green bar: the model's chance the home team wins. White bar: the
-market's price for that. Every flag still gets a human news check.</p>
+<p class="sub">Two words. <b style="color:var(--yellow)">RISKY</b> means a team looks
+cheaper than it should be, but picking a team to win lost 12% over five seasons in
+testing (871 bets), and the spread pick covered 49.2% against a 52.4% breakeven
+&mdash; so it is your call, not ours. There is no BET tier for football: nothing here
+has beaten the market yet. <b>NO BET</b> means the price is fair. Tap <b>Details</b>
+on any card for the numbers. Check injuries and inactives before you buy: the model
+cannot see them.</p>
 {week_note}{price_age}{tier_buttons(week_rows, "nfl") if week_rows else ""}<div class="grid">{cards}</div>
 </div>
 
