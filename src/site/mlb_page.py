@@ -194,16 +194,32 @@ def game_card(r):
 
     note = ""
     v = str(r["verdict"])
+    # "HIGH VALUE -- SF" reads as "the model likes SF to win," and often it
+    # doesn't: a HIGH VALUE badge can name the side the model expects to
+    # LOSE, when the market's price on it is wrong enough to be worth buying
+    # anyway. Demonstrated twice on real cards (CWS@CLE, then SF@STL, where
+    # the model favored STL at 52% and the badge said HIGH VALUE -- SF). The
+    # collapsed "Why" section already explained this in prose, but hiding
+    # the one sentence that prevents the misread is backwards -- it has to
+    # be visible without opening anything. The badge itself now says
+    # "(underdog)" and a one-line disambiguator sits right next to it,
+    # outside any <details>.
+    disambig = ""
+    if "&mdash;" in v and (v.startswith("HIGH VALUE") or v.startswith("CAUTIOUS")):
+        vside = v.split("&mdash;")[-1].strip().replace("small edge on ", "")
+        if vside != fav0:
+            soft = "" if v.startswith("HIGH VALUE") else " The edge is small here -- treat it lightly."
+            v = v.replace(vside, f"{vside} (underdog)", 1)
+            disambig = (f'<div class="disambig">Model still favors <b>{fav0}</b> to win '
+                        f'({fav_p*100:.0f}%) &mdash; this bets the price on <b>{vside}</b>, '
+                        f'not the winner.{soft}</div>')
     if has_price:
         mkt_fav = r["home"] if mk >= 0.5 else r["away"]
         if "&mdash;" in v and (v.startswith("HIGH VALUE") or v.startswith("CAUTIOUS")):
-            side = v.split("&mdash;")[-1].strip().replace("small edge on ", "")
+            side = v.split("&mdash;")[-1].strip().replace("small edge on ", "").replace(" (underdog)", "")
             soft = "" if v.startswith("HIGH VALUE") else " The edge is small, so treat this one lightly."
             if side != fav0:
-                note = (f'For value: the model still expects <b>{fav0}</b> to win, '
-                        f'but the market charges too much for {fav0}. The value '
-                        f'play is <b>{side}</b>: buying the underpriced side, not '
-                        f'picking the winner.' + soft)
+                pass  # already said, plainly and visibly, in `disambig` above
             elif side == mkt_fav:
                 note = (f'For value: the model and the market agree <b>{side}</b> is '
                         f'the likely winner, but the model is more confident than the '
@@ -239,7 +255,7 @@ def game_card(r):
 
     return (f'<div class="card"><div class="match"><span class="teams">{r["away"]} @ '
             f'{r["home"]}</span><span class="date">{r["date"]}</span></div>'
-            f'<div class="leadv">{verdict_badge(v)}</div>'
+            f'<div class="leadv">{verdict_badge(v)}</div>{disambig}'
             f'<div class="call">{call}</div><div class="gline">{gline}</div>{sp}'
             f'<div class="bars">{model_bar}{narr_bar}{mkt_bar}</div>'
             f'{gaptxt}{tot_row}{why_block}</div>')

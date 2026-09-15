@@ -182,6 +182,13 @@ nav button.on:hover{color:#08120b}
    so it gets its own size step instead of sharing the small inline badges'. */
 .leadv{margin:6px 0 2px}
 .leadv .verdict{font-size:.8rem;padding:4px 13px}
+/* The one sentence that stops "HIGH VALUE -- SF" reading as "SF wins": when
+   the flagged side isn't who the model expects to win, this says so right
+   next to the badge -- never inside a collapsed section, since hiding it
+   is exactly what let the misread happen twice on real cards. */
+.disambig{font-size:.75rem;color:var(--white);background:rgba(240,180,40,.1);
+  border-left:3px solid var(--yellow);border-radius:0 6px 6px 0;
+  padding:5px 9px;margin:6px 0}
 .why{margin-top:6px}
 .why summary{cursor:pointer;color:var(--green);font-size:.72rem;
   text-transform:uppercase;letter-spacing:.04em}
@@ -387,18 +394,30 @@ def game_card(r):
         gaptxt = '<div class="gap">Market has not opened this game yet</div>'
     v = str(r["verdict"])
     note = ""
-    fav = r["home"] if pm >= 0.5 else r["away"]
+    fav = r["home"] if pm >= 0.5 else r["away"]  # same value as fav0/fav_p above
     has_price = r.get("mkt_home") is not None and not pd.isna(r.get("mkt_home"))
+    # "HIGH VALUE -- SF" reads as "the model likes SF to win," and often it
+    # doesn't: the badge can name the side the model expects to LOSE, when
+    # the market's price on it is wrong enough to be worth buying anyway.
+    # Demonstrated on real cards (CWS@CLE, SF@STL on the MLB page). The one
+    # sentence that prevents the misread has to be visible without opening
+    # anything, so it sits right next to the badge, not inside "Why."
+    disambig = ""
+    if "&mdash;" in v and (v.startswith("HIGH VALUE") or v.startswith("CAUTIOUS")):
+        vside = v.split("&mdash;")[-1].strip().replace("small edge on ", "")
+        if vside != fav:
+            dsoft = "" if v.startswith("HIGH VALUE") else " The edge is small here -- treat it lightly."
+            v = v.replace(vside, f"{vside} (underdog)", 1)
+            disambig = (f'<div class="disambig">Model still favors <b>{fav}</b> to win '
+                        f'({fav_p*100:.0f}%) &mdash; this bets the price on <b>{vside}</b>, '
+                        f'not the winner.{dsoft}</div>')
     if has_price:
         mkt_fav = r["home"] if float(r["mkt_home"]) >= 0.5 else r["away"]
         if "&mdash;" in v and (v.startswith("HIGH VALUE") or v.startswith("CAUTIOUS")):
-            side = v.split("&mdash;")[-1].strip().replace("small edge on ", "")
+            side = v.split("&mdash;")[-1].strip().replace("small edge on ", "").replace(" (underdog)", "")
             soft = "" if v.startswith("HIGH VALUE") else                 " The edge is small, so treat this one lightly."
             if side != fav:
-                note = (f'For value: the model still expects <b>{fav}</b> to win, '
-                        f'but the market charges too much for {fav}. The value '
-                        f'play is <b>{side}</b>: buying the underpriced side, '
-                        f'not picking the winner.' + soft)
+                pass  # already said, plainly and visibly, in `disambig` above
             elif side == mkt_fav:
                 note = (f'For value: the model and the market agree <b>{side}</b> '
                         f'is the likely winner, but the model is more confident '
@@ -448,7 +467,7 @@ def game_card(r):
                  f'{why}</details>' if why else "")
     return (f'<div class="card"><div class="match"><span class="teams">{r["away"]} @ '
             f'{r["home"]}</span><span class="date">{r["date"]}</span></div>'
-            f'<div class="leadv">{verdict_badge(v)}</div>'
+            f'<div class="leadv">{verdict_badge(v)}</div>{disambig}'
             f'<div class="call">{call}</div><div class="gline">{gline}</div>'
             f'<div class="bars">{model_bar}{mkt_bar}</div>{gaptxt}{why_block}</div>')
 def health_strip(today, health_path="data/nfl/health.json"):
