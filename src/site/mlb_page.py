@@ -138,6 +138,7 @@ def game_card(r):
     # same way the moneyline verdict badge is, so the two calls on a card
     # read the same way.
     tot_row = ""
+    ladder_line = ""
     mt = r.get("mu_total")
     if mt is not None and not pd.isna(mt):
         # `tcall`, not `call`: `call` is the "Bayesian Model: X by Y runs"
@@ -178,19 +179,34 @@ def game_card(r):
             if tf is not None and not pd.isna(tf):
                 wx = f" &middot; {int(float(tf))}&deg;F at first pitch"
 
+        # Same trap as "HIGH VALUE -- SF": the flagged totals side is
+        # whichever of OVER/UNDER has the bigger price edge, which is not
+        # always the side the model's own number actually leans toward. If
+        # the model's raw runs estimate disagrees with the call, say so
+        # right here -- not buried in the ladder -- the same fix just made
+        # for the moneyline badge, for the same reason.
+        tot_disambig = ""
+        ladder_line = ""
         if side and line is not None:
             cls = "v-high" if (has_edge and te > 0.04) else "v-caut" if has_edge else "v-avoid"
             edge_txt = (f'edge {float(te)*100:+.1f}% after fees' if has_edge
                        else 'no edge at the current price')
+            model_side = "Over" if float(mt) > line else "Under"
+            if has_edge and model_side != side:
+                tot_disambig = (f'<div class="disambig">Model\'s own number ({float(mt):.1f}) '
+                                f'actually leans <b>{model_side}</b> &mdash; this bets the price '
+                                f'on <b>{side}</b>, not the model\'s runs call.</div>')
             tot_row = (f'<div class="gap">Total runs call: '
                       f'<span class="verdict {cls}" style="padding:2px 10px;font-size:.78rem">'
                       f'{side} {line:g}</span> &middot; {edge_txt} &middot; '
-                      f'model expects <b>{float(mt):.1f}</b> runs{wx}</div>'
-                      f'<div class="gap" style="font-size:.82rem;opacity:.75">'
-                      f'{" &middot; ".join(ladder)}</div>')
+                      f'model expects <b>{float(mt):.1f}</b> runs{wx}</div>{tot_disambig}')
+            ladder_line = (f'<div class="gap" style="font-size:.82rem;opacity:.75">'
+                          f'{" &middot; ".join(ladder)}</div>')
         elif ladder:
             tot_row = (f'<div class="gap">Total runs: model expects <b>{float(mt):.1f}</b>{wx} '
-                      f'&middot; {" &middot; ".join(ladder)} &middot; no price to compare yet</div>')
+                      f'&middot; no price to compare yet</div>')
+            ladder_line = (f'<div class="gap" style="font-size:.82rem;opacity:.75">'
+                          f'{" &middot; ".join(ladder)}</div>')
 
     note = ""
     v = str(r["verdict"])
@@ -246,12 +262,14 @@ def game_card(r):
 
     # The badge answers "what do I do" -- it used to sit last, after 8+ lines
     # of prose. It's first now, right under the matchup. The reasoning behind
-    # it (why this side, not the model's favorite) and the run line (not a
-    # backtested bet) are real information, not clutter, so they stay on the
-    # card -- just collapsed, the same pattern the run-health strip uses.
-    why = "".join(x for x in (note, rl_row) if x)
-    why_block = (f'<details class="why"><summary>Why{" &middot; run line" if rl_row else ""}</summary>'
-                 f'{why}</details>' if why else "")
+    # it (why this side, not the model's favorite), the full O/U ladder, and
+    # the run line (not a backtested bet) are real information, not clutter,
+    # so they stay on the card -- just collapsed, the same pattern the
+    # run-health strip uses.
+    extras = [x for x in (("run line", rl_row), ("O/U ladder", ladder_line)) if x[1]]
+    why = "".join(x for x in (note, rl_row, ladder_line) if x)
+    label = " &middot; " + " &middot; ".join(t for t, _ in extras) if extras else ""
+    why_block = f'<details class="why"><summary>Why{label}</summary>{why}</details>' if why else ""
 
     return (f'<div class="card"><div class="match"><span class="teams">{r["away"]} @ '
             f'{r["home"]}</span><span class="date">{r["date"]}</span></div>'
