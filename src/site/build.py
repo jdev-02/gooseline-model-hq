@@ -98,6 +98,29 @@ function sport(s){
   document.getElementById('sw-'+s).classList.add('on');
   window.scrollTo(0,0);
 }
+function mtier(t, scope){
+  var page = document.getElementById('page-' + scope);
+  if (!page) return;
+  page.querySelectorAll('.tierbar .bandbtn').forEach(function(b){ b.classList.remove('on'); });
+  var on = document.getElementById('tier-' + scope + '-' + t);
+  if (on) on.classList.add('on');
+  page.querySelectorAll('.grid .card').forEach(function(c){
+    var show = t === 'all' || (t === 'tot' ? c.classList.contains('tot-flag')
+                                           : c.classList.contains('tier-' + t));
+    c.style.display = show ? '' : 'none';
+  });
+}
+/* Kickoffs are stored as UTC instants; show them on the reader's own clock. */
+function localiseKickoffs(){
+  document.querySelectorAll('.card .date[data-kick]').forEach(function(el){
+    var iso = el.dataset.kick; if (!iso) return;
+    var d = new Date(iso); if (isNaN(d.getTime())) return;
+    el.textContent = d.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'})
+      + ', ' + d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit', timeZoneName:'short'});
+  });
+}
+if (document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', localiseKickoffs); }
+else { localiseKickoffs(); }
 function mtab(id){
   document.querySelectorAll('#page-mlb .panel').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('#page-mlb nav button').forEach(b=>b.classList.remove('on'));

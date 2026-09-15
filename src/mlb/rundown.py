@@ -285,6 +285,9 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
                "sigma_narrative": round(sg_n, 3), "p_home_narrative": round(p_n, 3),
                "edge_narrative": None, "verdict_narrative": "no price",
                "run_line": RUN_LINE,
+               # First pitch as a real instant, so the page can render it on
+               # the reader's own clock instead of the build machine's.
+               "kick_iso": str(getattr(r, "game_datetime_utc", "") or ""),
                "p_home_cover": round(float(prob_margin_over(mu[j], sigma[j], RUN_LINE)), 3),
                "p_away_cover": round(float(1 - prob_margin_over(mu[j], sigma[j], -RUN_LINE)), 3),
                "note": ent.note if ent else ""}

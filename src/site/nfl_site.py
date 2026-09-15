@@ -180,6 +180,22 @@ nav button.on:hover{color:#08120b}
 /* The lead badge sits right under the matchup header now, not last after a
    wall of prose -- it's the one thing every card must answer at a glance,
    so it gets its own size step instead of sharing the small inline badges'. */
+/* Labelled line rows (David's card grammar): model line / model picks /
+   price disagreement, same bold block, so the two questions are adjacent. */
+.lrow{padding:2px 0;line-height:1.4}
+.llab{color:var(--dim);font-size:.72rem;text-transform:uppercase;letter-spacing:.04em}
+.lval{font-size:1.05rem;font-weight:700;color:var(--green);margin-left:3px}
+.lval.vval{color:var(--white)}
+.lnote{color:var(--dim);font-size:.72rem;margin-left:3px}
+.lpct{color:var(--white);font-size:.88rem;font-weight:600;margin-left:3px}
+.pnone{font-size:.85rem;font-weight:600;color:var(--dim)}
+.psmall{font-size:.7rem;font-weight:600;color:var(--dim)}
+.sq3{border-left:3px solid var(--yellow);padding-left:8px;color:var(--white)}
+.tierbar{flex-wrap:wrap}
+.cnt{display:inline-block;margin-left:6px;padding:0 6px;border-radius:99px;
+  background:rgba(255,255,255,.12);font-size:.7rem}
+.bandbtn.on .cnt{background:rgba(0,0,0,.18)}
+.bandbtn:disabled{opacity:.35;cursor:default}
 .leadv{margin:6px 0 2px}
 .leadv .verdict{font-size:.8rem;padding:4px 13px}
 /* The one sentence that stops "HIGH VALUE -- SF" reading as "SF wins": when
@@ -378,55 +394,98 @@ def verdict_badge(v, edge=None):
     return '<span class="verdict v-none">No price yet</span>'
 
 
+SQUARE3_SIGMAS = 0.40
+
+
+def square3_gap(p_model, p_market):
+    lo, hi = 1e-6, 1 - 1e-6
+    return float(norm.ppf(min(max(p_model, lo), hi)) - norm.ppf(min(max(p_market, lo), hi)))
+
+
+def verdict_tier(v):
+    v = str(v)
+    if v.startswith("HIGH VALUE"):
+        return "high"
+    if v.startswith("CAUTIOUS"):
+        return "small"
+    if v.startswith("NO VALUE") or v.startswith("STALE"):
+        return "none"
+    return "nopr"
+
+
 def game_card(r):
     mu, sigma, pm = r["mu"], r["sigma"], r["p_home"]
-    call = (f"Bayesian Model: <b>{r['home']} by {abs(mu):.0f}</b>" if mu >= 0
-            else f"Bayesian Model: <b>{r['away']} by {abs(mu):.0f}</b>")
-    call += f" &plusmn;{sigma:.0f}"
     fav0 = r["home"] if pm >= 0.5 else r["away"]
     fav_p = pm if pm >= 0.5 else 1 - pm
-    # No "or for value" clause here: when the flagged side differs from the
-    # model's favorite, the collapsed "Why" section below says so once. This
-    # used to say it twice, in two different phrasings, on the same card.
-    gline = (f'Gambler terms: <b>{fav_line(mu, r["home"], r["away"])}</b> &middot; '
-             f'{fav0} ML <b>{american(fav_p)}</b>')
+    v = str(r["verdict"])
+    vside = ""
+    if "&mdash;" in v and (v.startswith("HIGH VALUE") or v.startswith("CAUTIOUS")):
+        vside = v.split("&mdash;")[-1].strip().replace("small edge on ", "")
+    has_price = r.get("mkt_home") is not None and not pd.isna(r.get("mkt_home"))
+    edge = r.get("edge")
+    # Three labelled rows (David's layout): the model's line, who it thinks
+    # wins, and what is priced wrong -- separate questions on adjacent lines.
+    sl = r.get("spread_line")
+    has_sl = sl is not None and not pd.isna(sl)
+    lines = (f'<div class="lrow"><span class="llab">Model:</span> '
+             f'<span class="lval">{fav_line(mu, r["home"], r["away"])}</span> '
+             f'<span class="lnote">&plusmn;{sigma:.0f} &middot; fair ML {american(fav_p)}</span></div>'
+             f'<div class="lrow"><span class="llab">Vegas:</span> '
+             f'<span class="lval vval">{fav_line(sl, r["home"], r["away"]) if has_sl else "&mdash;"}</span></div>')
+    if abs(fav_p - 0.5) < 0.005:
+        ml_row = ('<div class="lrow"><span class="llab">Model picks:</span> '
+                  '<span class="lval">too close to call</span></div>')
+    else:
+        ml_row = (f'<div class="lrow"><span class="llab">Model picks:</span> '
+                  f'<span class="lval">{fav0}</span> '
+                  f'<span class="lpct">to win <b>{fav_p*100:.0f}%</b> of the time</span></div>')
+    if vside:
+        e_txt = "" if edge is None or pd.isna(edge) else f" ({float(edge)*100:+.1f}%)"
+        small = "" if v.startswith("HIGH VALUE") else ' <span class="psmall">(small)</span>'
+        still = (f' <span class="psmall">&mdash; model still expects {fav0} to win</span>'
+                 if vside != fav0 else "")
+        dis_html = f'{vside} ML{e_txt}{small}{still}'
+    elif has_price:
+        dis_html = '<span class="pnone">None at current prices</span>'
+    else:
+        dis_html = '<span class="pnone">No market price yet</span>'
+    dis_row = (f'<div class="lrow"><span class="llab">Price disagreement:</span> '
+               f'<span class="lval plist">{dis_html}</span></div>')
+    # Both bars follow the model's favourite, the team the card is about.
+    focus = fav0
+    pf = pm if focus == r["home"] else 1 - pm
     model_bar = (f'<div class="brow"><span class="blab">Bayesian model</span>'
                  f'<div class="btrack"><div class="bfill model" '
-                 f'style="width:{pm*100:.1f}%"></div></div>'
-                 f'<span class="bval">{pm*100:.0f}%</span></div>')
-    if r.get("mkt_home") is not None and not pd.isna(r.get("mkt_home")):
+                 f'style="width:{pf*100:.1f}%"></div></div>'
+                 f'<span class="bval">{pf*100:.0f}%</span></div>')
+    sq3_row = ""
+    if has_price:
         mk = float(r["mkt_home"])
-        gap = (pm - mk) * 100
+        ma = r.get("mkt_away")
+        mk_focus = mk if focus == r["home"] else (float(ma) if ma is not None and not pd.isna(ma) else 1 - mk)
+        gap = (pf - mk_focus) * 100
         mkt_bar = (f'<div class="brow"><span class="blab">Market price</span>'
                    f'<div class="btrack"><div class="bfill mkt" '
-                   f'style="width:{mk*100:.1f}%"></div></div>'
-                   f'<span class="bval">{mk*100:.0f}&cent;</span></div>')
-        gaptxt = (f'<div class="gap">Both bars: chance the home team wins. '
+                   f'style="width:{mk_focus*100:.1f}%"></div></div>'
+                   f'<span class="bval">{mk_focus*100:.0f}&cent;</span></div>')
+        gaptxt = (f'<div class="gap">Both bars: chance <b>{focus}</b> wins. '
                   f'Disagreement: <b>{gap:+.0f}</b> points of probability '
-                  f'{"toward" if gap > 0 else "against"} {r["home"]}</div>')
+                  f'{"toward" if gap > 0 else "against"} {focus}</div>')
+        if vside:
+            v_model = pm if vside == r["home"] else 1 - pm
+            v_mkt = mk if vside == r["home"] else (float(ma) if ma is not None and not pd.isna(ma) else 1 - mk)
+            z = square3_gap(v_model, v_mkt)
+            if z > SQUARE3_SIGMAS:
+                sq3_row = (f'<div class="gap sq3">Model and market are about <b>{z*sigma:.0f}</b> points '
+                           f'apart here, against a typical miss of &plusmn;{sigma:.0f}. A gap that '
+                           f'size usually means the model has not seen some news; check injuries '
+                           f'and inactives before acting.</div>')
     else:
         mkt_bar = (f'<div class="brow"><span class="blab">Market price</span>'
                    f'<div class="btrack"></div><span class="bval">&mdash;</span></div>')
         gaptxt = '<div class="gap">Market has not opened this game yet</div>'
-    v = str(r["verdict"])
     note = ""
-    fav = r["home"] if pm >= 0.5 else r["away"]  # same value as fav0/fav_p above
-    has_price = r.get("mkt_home") is not None and not pd.isna(r.get("mkt_home"))
-    # "HIGH VALUE -- SF" reads as "the model likes SF to win," and often it
-    # doesn't: the badge can name the side the model expects to LOSE, when
-    # the market's price on it is wrong enough to be worth buying anyway.
-    # Demonstrated on real cards (CWS@CLE, SF@STL on the MLB page). The one
-    # sentence that prevents the misread has to be visible without opening
-    # anything, so it sits right next to the badge, not inside "Why."
-    disambig = ""
-    if "&mdash;" in v and (v.startswith("HIGH VALUE") or v.startswith("CAUTIOUS")):
-        vside = v.split("&mdash;")[-1].strip().replace("small edge on ", "")
-        if vside != fav:
-            dsoft = "" if v.startswith("HIGH VALUE") else " The edge is small here -- treat it lightly."
-            v = v.replace(vside, f"{vside} (underdog)", 1)
-            disambig = (f'<div class="disambig">Model still favors <b>{fav}</b> to win '
-                        f'({fav_p*100:.0f}%) &mdash; this bets the price on <b>{vside}</b>, '
-                        f'not the winner.{dsoft}</div>')
+    fav = fav0
     if has_price:
         mkt_fav = r["home"] if float(r["mkt_home"]) >= 0.5 else r["away"]
         if "&mdash;" in v and (v.startswith("HIGH VALUE") or v.startswith("CAUTIOUS")):
@@ -481,11 +540,24 @@ def game_card(r):
     why = "".join(x for x in (note, spread_row) if x)
     why_block = (f'<details class="why"><summary>Why{" &middot; spread" if spread_row else ""}</summary>'
                  f'{why}</details>' if why else "")
-    return (f'<div class="card"><div class="match"><span class="teams">{r["away"]} @ '
-            f'{r["home"]}</span><span class="date">{r["date"]}</span></div>'
-            f'<div class="leadv">{verdict_badge(v, r.get("edge"))}</div>{disambig}'
-            f'<div class="call">{call}</div><div class="gline">{gline}</div>'
-            f'<div class="bars">{model_bar}{mkt_bar}</div>{gaptxt}{why_block}</div>')
+    kick = str(r.get("kick_iso") or "")
+    return (f'<div class="card tier-{verdict_tier(v)}"><div class="match"><span class="teams">{r["away"]} @ '
+            f'{r["home"]}</span><span class="date" data-kick="{kick}">{r["date"]}</span></div>'
+            f'<div class="leadv">{verdict_badge(v, r.get("edge"))}</div>'
+            f'{lines}{ml_row}{dis_row}'
+            f'<div class="bars">{model_bar}{mkt_bar}</div>{gaptxt}{sq3_row}{why_block}</div>')
+
+
+def tier_buttons(rows, scope):
+    from collections import Counter
+    counts = Counter(verdict_tier(str(r.get("verdict", ""))) for r in rows)
+    spec = [("all", "All", len(rows)), ("high", "Disagreements", counts.get("high", 0)),
+            ("small", "Small", counts.get("small", 0)), ("none", "Fair price", counts.get("none", 0))]
+    btns = "".join(
+        f'<button id="tier-{scope}-{k}" class="bandbtn{" on" if k == "all" else ""}"'
+        f'{"" if n or k == "all" else " disabled"} onclick="mtier(\'{k}\',\'{scope}\')">'
+        f'{lab}<span class="cnt">{n}</span></button>' for k, lab, n in spec)
+    return f'<div class="bandbar tierbar">{btns}</div>'
 def health_strip(today, health_path="data/nfl/health.json"):
     """Same purpose as the MLB page's strip (src/site/mlb_page.py): the run's
     own audit, above the first card, so a reader can trust a number before
@@ -603,11 +675,16 @@ def build_site(out_path="site.html", games_path="data/nfl/games.csv",
             except Exception:
                 pass
         for j, row in enumerate(upcoming.itertuples(index=False)):
+            try:
+                kick = (pd.Timestamp(f"{row.gameday.date()} {getattr(row, 'gametime', None) or '13:00'}")
+                        .tz_localize("America/New_York").tz_convert("UTC").isoformat())
+            except Exception:
+                kick = ""
             rec = {"date": row.gameday.date(), "away": row.away_team,
                    "home": row.home_team, "mu": mu[j], "sigma": sigma[j],
-                   "p_home": p_home[j], "mkt_home": None,
+                   "p_home": p_home[j], "mkt_home": None, "mkt_away": None,
                    "spread_line": getattr(row, "spread_line", None),
-                   "verdict": "no price"}
+                   "verdict": "no price", "kick_iso": kick}
             ev = rd.match_event(prices, row.away_team, row.home_team)
             if ev:
                 hp = ev.get(row.home_team)
@@ -615,6 +692,8 @@ def build_site(out_path="site.html", games_path="data/nfl/games.csv",
                     rec["mkt_home"] = hp["ask"]
                     e = p_home[j] - hp["ask"] - rd.kalshi_fee(hp["ask"])
                     ap = ev.get(row.away_team)
+                    if ap and ap.get("ask") is not None:
+                        rec["mkt_away"] = ap["ask"]
                     ea = ((1 - p_home[j]) - ap["ask"] - rd.kalshi_fee(ap["ask"])
                           if ap and ap.get("ask") is not None else -1)
                     best = max(e, ea)
@@ -698,7 +777,7 @@ walked forward over 2021&ndash;2025, betting every such disagreement lost 12%
 (docs/baselines.md). The model picks winners well; the market's price already
 knows that. Green bar: the model's chance the home team wins. White bar: the
 market's price for that. Every flag still gets a human news check.</p>
-{week_note}{price_age}<div class="grid">{cards}</div>
+{week_note}{price_age}{tier_buttons(week_rows, "nfl") if week_rows else ""}<div class="grid">{cards}</div>
 </div>
 
 <div id="parlays" class="panel">
