@@ -110,11 +110,18 @@ for r in log.itertuples(index=False):
             p_over = getattr(r, f"p_over_{line:g}", np.nan)
             if pd.notna(p_over):
                 p_model = float(p_over) if direction == "OVER" else 1 - float(p_over)
-                # the logged ask is for the over rung; under is its complement
-                ask = np.nan
                 won = (total > line) if direction == "OVER" else (total < line)
-                # reconstruct the traded price from model prob minus edge and fee
-                ask = float(p_model - te - kalshi_fee(max(min(p_model - te, .99), .01)))
+                # Use the price the rundown actually saw for the side it
+                # called: mkt_over_X for OVER, mkt_under_X (1 - bid) for
+                # UNDER. Older rows without mkt_under fall back to
+                # back-solving from the logged edge, which is what this did
+                # for every row before the under was priced off the bid.
+                col = f"mkt_over_{line:g}" if direction == "OVER" else f"mkt_under_{line:g}"
+                logged = getattr(r, col.replace(".", "_"), np.nan)
+                if pd.notna(logged):
+                    ask = float(logged)
+                else:
+                    ask = float(p_model - te - kalshi_fee(max(min(p_model - te, .99), .01)))
                 rows.append(dict(date=r.date, game_pk=pk, market=f"{direction} {line:g}",
                                  pick=call, ask=ask, p_model=p_model, edge=float(te),
                                  won=bool(won),

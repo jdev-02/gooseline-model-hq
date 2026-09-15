@@ -225,7 +225,8 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
             use_live_prices=True):
     cfg = load_config()
     cols = cfg["feature_cols"]
-    today = pd.Timestamp(asof or date.today()).normalize()
+    from src.core.clock import slate_today
+    today = pd.Timestamp(asof).normalize() if asof else slate_today()
     end = today + pd.Timedelta(days=days - 1)
     df = build_frame(cfg, refresh_window=(today.date(), end.date()))
     up = df[df["y"].isna() & (df["gameday"] >= today) & (df["gameday"] <= end)
@@ -259,8 +260,16 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
     except Exception as e:
         print(f"totals pricing skipped ({e})", file=sys.stderr)
         totals = {}
-    tot_prices = (live_prices("KXMLBTOTAL", mlb_total_key)
-                  if (totals and use_live_prices) else {})
+    # Same live-then-snapshot fallback the moneyline gets. Without it one
+    # Kalshi outage silently emptied the totals market for the day -- no
+    # total_call logged, no paper-trade row, every card "no price to
+    # compare yet" -- and the health gate did not notice because it only
+    # tests mu_total.
+    tot_prices = {}
+    if totals:
+        tot_prices = live_prices("KXMLBTOTAL", mlb_total_key) if use_live_prices else {}
+        if not tot_prices:
+            tot_prices = latest_prices(db_path, "KXMLBTOTAL", mlb_total_key)
 
     rows = []
     for j, r in enumerate(up.itertuples(index=False)):
@@ -313,11 +322,19 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
                 rec[f"p_over_{ln:g}"] = p_over
                 q = tp.get(f"{ln:g}")
                 ask = q.get("ask") if q else None
+                bid = q.get("bid") if q else None
                 rec[f"mkt_over_{ln:g}"] = ask
                 if ask is None:
                     continue
+                # A NO contract costs 1 minus the YES *bid*, not 1 minus the
+                # ask. Pricing the under from the ask overstated every UNDER
+                # edge by the whole bid-ask spread (a 6-cent spread became a
+                # phantom +6% edge and a green badge). Fall back to the ask
+                # only when the quote carries no bid.
+                under_cost = (1 - bid) if bid is not None else (1 - ask)
+                rec[f"mkt_under_{ln:g}"] = round(float(under_cost), 3)
                 e_o = p_over - ask - kalshi_fee(ask)
-                e_u = (1 - p_over) - (1 - ask) - kalshi_fee(1 - ask)
+                e_u = (1 - p_over) - under_cost - kalshi_fee(under_cost)
                 for e, side in ((e_o, f"OVER {ln:g}"), (e_u, f"UNDER {ln:g}")):
                     if best_t is None or e > best_t:
                         best_t, best_desc = e, side

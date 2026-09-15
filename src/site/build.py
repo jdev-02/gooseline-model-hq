@@ -123,9 +123,9 @@ had not seen the game, and the track record shows the misses next to the hits.
 <br><br>
 <b>What this is not.</b> It is not a betting service, a tipsheet, or a product.
 There is nothing to buy, no picks for sale, and no sportsbook links anywhere on
-this page. Where the model and the market disagree, the page says so and shows the
-record of acting on that disagreement, which so far favours the market on moneylines
-and is undecided on totals.
+this page. Where the model and the market disagree, the page says so, and the Track
+Record tab shows what acting on that disagreement has actually returned, market by
+market, recomputed every morning.
 </div>
 </div>
 """
@@ -162,7 +162,8 @@ the evaluation methodology and the MLB extension are Gooseline's.</p>
 
 def build(out="docs/index.html", narrative=None, days=1,
           db="data/kalshi_prices.db", skip_nfl=False):
-    today = pd.Timestamp.today().date()
+    from src.core.clock import slate_today
+    today = slate_today().date()
 
     nfl_body = '<div class="wrap"><p class="sub">NFL page not built this run.</p></div>'
     if not skip_nfl:

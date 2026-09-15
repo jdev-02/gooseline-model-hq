@@ -530,28 +530,32 @@ def build_site(out_path="site.html", games_path="data/nfl/games.csv",
     df = rd.build_frame(games_path, stats_path)
     hist, by_season, calib = history_tables(df)
 
-    today = pd.Timestamp.today().normalize()
+    from src.core.clock import slate_today, now_et as _now_et
+    today = slate_today()
     future = df[df["result"].isna() & (df["gameday"] >= today)]
-    window = future[future["gameday"] <= today + pd.Timedelta(days=horizon_days)]
     # Same bug as src/nfl/rundown.py, independently: this path builds the
     # site's own cards from result.isna() and a date window, with no check
     # for whether a game has actually kicked off. On 2026-09-13 that priced
     # eight games against a live, in-progress Kalshi market at rebuild time.
     # This is the path a viewer actually reads on the site, so it gets the
-    # identical guard.
-    now_et = pd.Timestamp.now(tz="America/New_York")
+    # identical guard -- applied to `future`, not just the horizon window,
+    # so the "show next week" fallback below cannot re-admit a game that
+    # has already started (it did: it rebuilt `upcoming` from the unfiltered
+    # frame).
+    now_et = _now_et()
     kickoff = pd.to_datetime(
-        window["gameday"].dt.strftime("%Y-%m-%d") + " " + window["gametime"].fillna("13:00"),
+        future["gameday"].dt.strftime("%Y-%m-%d") + " " + future["gametime"].fillna("13:00"),
         errors="coerce",
     ).dt.tz_localize("America/New_York", ambiguous="NaT", nonexistent="NaT")
     started = kickoff.notna() & (kickoff <= now_et)
-    excluded_live = window.loc[started, ["gameday", "away_team", "home_team", "gametime"]]
+    excluded_live = future.loc[started, ["gameday", "away_team", "home_team", "gametime"]]
     if len(excluded_live):
         import sys
         print(f"build_site: excluding {len(excluded_live)} game(s) already past kickoff: "
               + "; ".join(f"{r.away_team}@{r.home_team} {r.gametime}ET"
                           for r in excluded_live.itertuples()), file=sys.stderr)
-    upcoming = window[~started]
+    future = future[~started]
+    upcoming = future[future["gameday"] <= today + pd.Timedelta(days=horizon_days)]
     week_note = ""
     if len(upcoming) == 0 and len(future):
         first = future["gameday"].min()
@@ -577,23 +581,27 @@ def build_site(out_path="site.html", games_path="data/nfl/games.csv",
             for ev in prices.values() for q in ev.values())
         price_age = ('<p class="sub">Market prices fetched live at build time.</p>'
                      if live else "")
-        try:
-            import sqlite3 as _sq
-            _con = _sq.connect(db_path)
-            _ts = _con.execute("SELECT MAX(ts_utc) FROM snapshots").fetchone()[0]
-            _con.close()
-            if _ts:
-                _age = pd.Timestamp.now(tz="UTC") - pd.Timestamp(_ts)
-                hrs = _age.total_seconds() / 3600
-                stale = (' <span style="color:var(--yellow)">(getting old; run the '
-                         'logger for fresh prices)</span>' if hrs > 24 else "")
-                price_age = (f'<p class="sub">Market prices last logged: '
-                             f'{pd.Timestamp(_ts).strftime("%b %d, %H:%M UTC")}, '
-                             f'about {hrs:.0f}h ago{stale}. "No price yet" means no '
-                             f'price existed in that snapshot; the market may have '
-                             f'opened since.</p>')
-        except Exception:
-            pass
+        # The snapshot-age caption below is the fallback's story. It used to
+        # overwrite the live line unconditionally, so the normal path told
+        # the reader the verdicts came from a 30-hour-old log.
+        if not live:
+            try:
+                import sqlite3 as _sq
+                _con = _sq.connect(db_path)
+                _ts = _con.execute("SELECT MAX(ts_utc) FROM snapshots").fetchone()[0]
+                _con.close()
+                if _ts:
+                    _age = pd.Timestamp.now(tz="UTC") - pd.Timestamp(_ts)
+                    hrs = _age.total_seconds() / 3600
+                    stale = (' <span style="color:var(--yellow)">(getting old; run the '
+                             'logger for fresh prices)</span>' if hrs > 24 else "")
+                    price_age = (f'<p class="sub">Market prices last logged: '
+                                 f'{pd.Timestamp(_ts).strftime("%b %d, %H:%M UTC")}, '
+                                 f'about {hrs:.0f}h ago{stale}. "No price yet" means no '
+                                 f'price existed in that snapshot; the market may have '
+                                 f'opened since.</p>')
+            except Exception:
+                pass
         for j, row in enumerate(upcoming.itertuples(index=False)):
             rec = {"date": row.gameday.date(), "away": row.away_team,
                    "home": row.home_team, "mu": mu[j], "sigma": sigma[j],

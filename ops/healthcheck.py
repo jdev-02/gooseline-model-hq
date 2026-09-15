@@ -150,6 +150,11 @@ def stage_data(rep, today):
         rep.add("moneyline probabilities finite", bad_p == 0, f"{n - bad_p}/{n}")
         bad_t = tlog["mu_total"].isna().sum() if "mu_total" in tlog else n
         rep.add("totals priced", bad_t == 0, f"{n - bad_t}/{n}")
+        # A model total without a market price is not a bet. This used to
+        # pass while a Kalshi outage had silently emptied the totals market.
+        tq = tlog["mkt_over_8.5"].notna().sum() if "mkt_over_8.5" in tlog else 0
+        rep.add("totals have a market price", tq >= max(1, int(0.6 * n)),
+                f"{tq}/{n} games have an O/U 8.5 quote", hard=tq == 0)
         if "temp_f" in tlog and "roof_closed" in tlog:
             roof = tlog["roof_closed"].astype(str).isin(["True", "1", "1.0"])
             no_wx = (tlog["temp_f"].isna() & ~roof).sum()
@@ -217,7 +222,8 @@ def main():
     ap.add_argument("--today", default=None, help="YYYY-MM-DD, default: today UTC-4")
     a = ap.parse_args()
     # The slate is an Eastern-time notion; the runners are UTC.
-    today = date.fromisoformat(a.today) if a.today else (datetime.now(timezone.utc) - timedelta(hours=4)).date()
+    from src.core.clock import slate_today
+    today = date.fromisoformat(a.today) if a.today else slate_today().date()
     rep = Report(a.stage)
     (stage_data if a.stage == "data" else stage_site)(rep, today)
 

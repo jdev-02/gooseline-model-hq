@@ -187,6 +187,14 @@ and swing from −100% to +54% as the threshold moves, which is what noise
 looks like. One mildly consistent lean: when the model says UNDER, the
 over hits 2–4 points less often than Kalshi implies, at all three lines.
 
+**Caveat found 2026-09-15 (code review):** every UNDER edge in this table
+was priced as `1 - over_ask`. A NO contract costs `1 - over_bid`, so the
+UNDER side was overstated by the full bid-ask spread (typically 2–6¢), and
+the "model says UNDER" rows above are inflated by that amount. The rundown
+now prices the under off the bid and logs `mkt_under_X`; this backtest
+must be re-run against bid-priced unders (the snapshot db carries bids)
+before the totals result is quoted again. The OVER rows are unaffected.
+
 **Verdict: unknown, not alive.** Totals is the only market not proven
 worse than Kalshi, and the only one worth continuing to track. It is not
 bettable on 85 games. It needs several hundred, and it needs the inputs

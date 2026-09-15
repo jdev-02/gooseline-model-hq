@@ -175,10 +175,14 @@ def game_card(r):
             po = float(po)
             lean, p = ("Over", po) if po >= 0.5 else ("Under", 1 - po)
             bold = ' style="font-weight:700"' if line == ln else ""
-            mk = r.get(f"mkt_over_{ln:g}")
+            # `mk_ln`, not `mk`: `mk` is the moneyline home price read above
+            # and used again below to name the market's favourite. Reusing
+            # it here left `mkt_fav` comparing the over-9.5 price (or None,
+            # which raises) -- the same variable-reuse trap as `call`.
+            mk_ln = r.get(f"mkt_over_{ln:g}")
             mktxt = ""
-            if mk is not None and not pd.isna(mk):
-                mask = float(mk) if lean == "Over" else 1 - float(mk)
+            if mk_ln is not None and not pd.isna(mk_ln):
+                mask = float(mk_ln) if lean == "Over" else 1 - float(mk_ln)
                 mktxt = f" (market {mask*100:.0f}%)"
             ladder.append(f'<span{bold}>{lean} {ln:g}: {p*100:.0f}%{mktxt}</span>')
 
@@ -336,6 +340,22 @@ def _history():
     return pd.read_csv(p) if p.exists() else None
 
 
+def ml_record():
+    """The live moneyline record, from the same file Live Bet Performance
+    renders, so prose and table can never disagree. Returns a phrase."""
+    p = DATA / "paper_trades.csv"
+    if not p.exists():
+        return "has no settled bets yet"
+    t = pd.read_csv(p)
+    t = t[t["market"].astype(str).str.upper() == "ML"]
+    if not len(t) or not t["stake"].sum():
+        return "has no settled bets yet"
+    roi = 100 * t["pnl"].sum() / t["stake"].sum()
+    w = int(t["won"].sum())
+    return (f"has returned {roi:+.1f}% over {len(t)} settled bets ({w}-{len(t) - w}) "
+            f"since 2026-08-27")
+
+
 def live_performance_html():
     """Every flagged bet the daily cron has settled, sourced straight from
     data/mlb/paper_trades.csv. That file was already regenerated every day by
@@ -490,8 +510,8 @@ it is knowing your 4.4 honestly.</p>
 <p><b>What the model has and has not shown.</b> On outcomes it is calibrated: when it
 says 60%, the home team wins about 60% of the time (the Honesty check on Track Record).
 Against the market it has not won: every disagreement it has with Kalshi's moneyline is
-"this game is closer than you think", and paper-traded since 2026-08-27 that has lost
-about 20%. The market is calibrated too, and it has information the model does not
+"this game is closer than you think", and paper-traded, acting on every such
+disagreement {ML_RECORD}. The market is calibrated too, and it has information the model does not
 (lineups, injuries, weather at first pitch, the sharp money). The one market where the
 model has not been beaten is total runs, where temperature and park are inputs the model
 reads well. That is why the total gets a green badge and the moneyline gets a grey one.</p>
@@ -597,8 +617,8 @@ def render(slate, today, health=None):
 <p class="sub">Each card shows where the model and the market disagree, and by how much.
 <b>Model disagrees</b> means the model prices that side higher than Kalshi does, after
 fees. It is not a prediction that the side wins: when the two differ, the card says which
-team the model actually expects to win. <b>The record so far:</b> moneyline disagreements
-have lost about 20% against Kalshi since 2026-08-27 (Live Bet Performance, Track Record
+team the model actually expects to win. <b>The record so far:</b> acting on every moneyline
+disagreement {ml_record()} (Live Bet Performance, Track Record
 tab). The <b>total runs</b> call is the one market Kalshi has not been shown to beat, and
 the only one that gets a green badge. Green bar: the model's chance the home team wins.
 White bar: the market's price for that. Every flag still gets a human news check.</p>
@@ -608,8 +628,8 @@ White bar: the market's price for that. Every flag still gets a human news check
 <div id="mparlays" class="panel">
 <h2>Parlay Lab</h2>
 <p class="sub"><b>Read this first.</b> Every leg here is a moneyline or run-line pick, the
-two markets where the model has lost against the market (moneyline about &minus;20%
-since 2026-08-27; run line 40&ndash;44% covers). The "avg profit" column is the model's
+two markets where the model has lost against the market (acting on moneyline
+disagreements {ml_record()}; run line 40&ndash;44% covers). The "avg profit" column is the model's
 own opinion of the combo, not a realized result, and a parlay multiplies each leg's
 shortfall along with the payout. This tab is here for transparency about what the model
 believes, not as a recommendation.
@@ -636,7 +656,7 @@ along with the thrill.</p>
 </div>
 
 <div id="mrecord" class="panel">{live_performance_html()}<h2>Track Record</h2>{track_record_html()}</div>
-<div id="mb101" class="panel"><h2>Bayesian 101</h2>{B101}</div>
+<div id="mb101" class="panel"><h2>Bayesian 101</h2>{B101.replace("{ML_RECORD}", ml_record())}</div>
 
 <footer>Every number here states its own uncertainty. Informational only.</footer>
 </div>"""

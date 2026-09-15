@@ -26,6 +26,8 @@ from pathlib import Path
 
 import pandas as pd
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data" / "nfl"
 HEALTH = DATA / "health.json"
@@ -126,8 +128,16 @@ def stage_data(rep, today):
     detail = "clean" if not bad else ("; ".join(bad[:5]) + (f"; +{len(bad)-5} more" if len(bad) > 5 else ""))
     rep.add("no game priced past its own kickoff", not bad, detail)
 
-    # Everything the row needs to be a real signal.
+    # Everything the row needs to be a real signal -- scoped to this run's
+    # rows, like the kickoff check above. Over the whole log these checks
+    # passed on the strength of past weeks when today's pricing had failed
+    # outright, and one NaN in September would have failed every day after.
+    rts = pd.to_datetime(log["run_ts"], utc=True)
+    log = log[(now_utc - rts).dt.total_seconds() / 60.0 <= RUN_MAX_AGE]
     n = len(log)
+    rep.add("rows priced this run", n > 0, f"{n} games priced in the last {RUN_MAX_AGE} min")
+    if n == 0:
+        return
     bad_p = log["p_home"].isna().sum() if "p_home" in log else n
     rep.add("moneyline probabilities finite", bad_p == 0, f"{n - bad_p}/{n}")
     priced = log["mkt_home"].notna().sum() if "mkt_home" in log else 0
@@ -192,8 +202,8 @@ def main():
     a = ap.parse_args()
     # tz-naive, to compare against games.csv's tz-naive gameday column
     # (rundown.py and nfl_site.py both key off Eastern-local dates this way).
-    today = (pd.Timestamp(a.today) if a.today
-             else pd.Timestamp.now(tz="America/New_York").normalize().tz_localize(None))
+    from src.core.clock import slate_today
+    today = pd.Timestamp(a.today) if a.today else slate_today()
     rep = Report()
     (stage_data if a.stage == "data" else stage_site)(rep, today)
 

@@ -11,6 +11,7 @@ from src.nfl.features import load_games, load_team_game_stats, build_features, F
 from src.core.kalman import TeamKalman
 from src.core.models import LinearGaussianModel
 from src.core.walkforward import season_decay_weights
+from src.core.clock import slate_today
 
 KALMAN_PARAMS = {"obs_var": 150.0, "weekly_q": 0.8, "season_inflate": 8.0,
                  "season_revert": 0.7}
@@ -238,7 +239,7 @@ def render_html(table, trained_through, out_path="rundown.html"):
             f'<title>NFL Model Rundown</title><style>{css}</style></head><body>'
             f'<h1>NFL Model Rundown</h1>'
             f'<p class="sub">Bayesian margin model &middot; trained through '
-            f'{trained_through} &middot; generated {pd.Timestamp.today().date()}</p>'
+            f'{trained_through} &middot; generated {slate_today().date()}</p>'
             f'{explainer}{"".join(cards)}'
             f'<footer>Green: model probability. Gold: market price. Shaded: the '
             f'disagreement. Nothing here is financial advice; it is one model, '
@@ -253,7 +254,8 @@ def rundown(games_path="data/nfl/games.csv", stats_path="data/nfl/team_game_stat
             html_out=None, use_live_prices=True,
             log_path="data/nfl/rundown_log.csv"):
     df = build_frame(games_path, stats_path)
-    today = pd.Timestamp.today().normalize()
+    from src.core.clock import slate_today
+    today = slate_today()
     window = df[df["result"].isna()
                 & (df["gameday"] >= today)
                 & (df["gameday"] <= today + pd.Timedelta(days=horizon_days))]
@@ -306,7 +308,7 @@ def rundown(games_path="data/nfl/games.csv", stats_path="data/nfl/team_game_stat
                "mu": round(mu[j], 1), "sigma": round(sigma[j], 1),
                "epi_sig": round(np.sqrt(epi[j]), 2),
                "p_home": round(p_home[j], 3),
-               "mkt_home": None, "edge": None, "verdict": "no price",
+               "mkt_home": None, "mkt_away": None, "edge": None, "verdict": "no price",
                "price_age_min": None}
         ev = match_event(prices, row.away_team, row.home_team)
         if ev:
@@ -319,6 +321,9 @@ def rundown(games_path="data/nfl/games.csv", stats_path="data/nfl/team_game_stat
                 if e_home > edge_threshold:
                     side = (row.home_team, e_home)
             if ap and ap.get("ask") is not None:
+                # Logged so the paper trade settles away-side bets at the
+                # price the model judged, not at 1 - home_ask (the away bid).
+                rec["mkt_away"] = ap["ask"]
                 e_away = (1 - p_home[j]) - ap["ask"] - kalshi_fee(ap["ask"])
                 if e_away > edge_threshold and (side is None or e_away > side[1]):
                     side = (row.away_team, e_away)
