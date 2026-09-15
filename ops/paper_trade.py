@@ -65,6 +65,11 @@ verd_col = "verdict" if args.stream == "model" else "verdict_narrative"
 # One row per game per run; keep the LAST run before the game, which is the
 # price a human acting on the page would most plausibly have seen.
 log = log.sort_values("run_ts").drop_duplicates(["game_pk", "date"], keep="last")
+# itertuples() renames any column with a dot in it ("p_over_8.5") to a
+# positional "_35", so getattr(r, "p_over_8.5") was NaN on every row and no
+# totals bet was ever recorded here -- the site's Live Bet Performance has
+# only ever shown moneylines. Found 2026-09-15.
+log = log.rename(columns={c: c.replace(".", "_") for c in log.columns if "." in c})
 
 rows = []
 for r in log.itertuples(index=False):
@@ -107,7 +112,7 @@ for r in log.itertuples(index=False):
         parts = call.split()
         if len(parts) == 2:
             direction, line = parts[0], float(parts[1])
-            p_over = getattr(r, f"p_over_{line:g}", np.nan)
+            p_over = getattr(r, f"p_over_{line:g}".replace(".", "_"), np.nan)
             if pd.notna(p_over):
                 p_model = float(p_over) if direction == "OVER" else 1 - float(p_over)
                 won = (total > line) if direction == "OVER" else (total < line)

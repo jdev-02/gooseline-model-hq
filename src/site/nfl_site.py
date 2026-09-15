@@ -455,6 +455,10 @@ def game_card(r):
                 f'{nick(vside)} win.{etxt}{still} <span class="warn">Picking a team to win has lost '
                 f'12% over five seasons in testing (871 bets) &mdash; that is why this is marked '
                 f'risky, not a bet.</span></div>')
+    elif v.startswith("STALE"):
+        tier, badge = "stale", '<span class="verdict v-caut">PRICE STALE &middot; re-check</span>'
+        body = ('<div class="how">The price we saw is too old to act on. Open Kalshi and look '
+                'before you buy anything here.</div>')
     else:
         tier, badge = "none", '<span class="verdict v-none">NO BET</span>'
         body = ('<div class="how">The price is fair. Nothing here is worth buying this week.</div>'
@@ -501,13 +505,15 @@ def game_card(r):
                  f'52.4% breakeven</span></div>')
     details = f'<details class="why"><summary>Details</summary>{"".join(d)}</details>'
     kick = str(r.get("kick_iso") or "")
-    return (f'<div class="card tier-{tier}"><div class="match"><span class="teams">{A} at {H}</span>'
+    return (f'<div class="card tier-{tier}" data-teams="{away}@{home}"><div class="match"><span class="teams">{A} at {H}</span>'
             f'<span class="date" data-kick="{kick}">{r["date"]}</span></div>'
             f'<div class="leadv">{badge}</div>{body}{who}{details}</div>')
 
 
 def card_tier(r):
     v = str(r.get("verdict", ""))
+    if v.startswith("STALE"):
+        return "stale"
     if v.startswith("HIGH VALUE") and r.get("mkt_home") is not None and not pd.isna(r.get("mkt_home")):
         return "risky"
     return "none"
@@ -517,7 +523,7 @@ def tier_buttons(rows, scope):
     from collections import Counter
     counts = Counter(card_tier(r) for r in rows)
     spec = [("all", "All games", len(rows)), ("risky", "Risky", counts.get("risky", 0)),
-            ("none", "No bet", counts.get("none", 0))]
+            ("stale", "Stale price", counts.get("stale", 0)), ("none", "No bet", counts.get("none", 0))]
     btns = "".join(
         f'<button id="tier-{scope}-{k}" class="bandbtn{" on" if k == "all" else ""}"'
         f'{"" if n or k == "all" else " disabled"} onclick="mtier(\'{k}\',\'{scope}\')">'
@@ -604,75 +610,39 @@ def build_site(out_path="site.html", games_path="data/nfl/games.csv",
                      f'({first.date()} onward).</p>')
     week_rows, parlays = [], []
     price_age = ""
-    if "week_note" not in dir():
-        week_note = ""
+    # One implementation of pricing: the cards are the rundown's own rows
+    # (same fit, same live fetch, same STALE downgrade, same verdict the
+    # log and the paper trade see). build_site used to re-fit and re-price
+    # on its own and had already drifted (code review, 2026-09-15).
+    table = None
     if len(upcoming):
-        lin, ens = rd.fit_models(df, int(upcoming["season"].max()))
-        Xu = upcoming[V3].values
-        mu, ale, epi = ens.predict_split(Xu)
-        sigma = rd.RECAL_SCALE * np.sqrt(ale + epi)
-        p_home = norm.cdf(mu / sigma)
-        # Live prices at render time; the sqlite log is the fallback and the
-        # historical record, not the source of a verdict.
-        prices = rd.live_prices_nfl() or rd.latest_prices(db_path)
-        live = bool(prices) and any(
-            q.get("asof") is not None
-            for ev in prices.values() for q in ev.values())
-        price_age = ('<p class="sub">Market prices fetched live at build time.</p>'
-                     if live else "")
-        # The snapshot-age caption below is the fallback's story. It used to
-        # overwrite the live line unconditionally, so the normal path told
-        # the reader the verdicts came from a 30-hour-old log.
-        if not live:
-            try:
-                import sqlite3 as _sq
-                _con = _sq.connect(db_path)
-                _ts = _con.execute("SELECT MAX(ts_utc) FROM snapshots").fetchone()[0]
-                _con.close()
-                if _ts:
-                    _age = pd.Timestamp.now(tz="UTC") - pd.Timestamp(_ts)
-                    hrs = _age.total_seconds() / 3600
-                    stale = (' <span style="color:var(--yellow)">(getting old; run the '
-                             'logger for fresh prices)</span>' if hrs > 24 else "")
-                    price_age = (f'<p class="sub">Market prices last logged: '
-                                 f'{pd.Timestamp(_ts).strftime("%b %d, %H:%M UTC")}, '
-                                 f'about {hrs:.0f}h ago{stale}. "No price yet" means no '
-                                 f'price existed in that snapshot; the market may have '
-                                 f'opened since.</p>')
-            except Exception:
-                pass
-        for j, row in enumerate(upcoming.itertuples(index=False)):
-            try:
-                kick = (pd.Timestamp(f"{row.gameday.date()} {getattr(row, 'gametime', None) or '13:00'}")
-                        .tz_localize("America/New_York").tz_convert("UTC").isoformat())
-            except Exception:
-                kick = ""
-            rec = {"date": row.gameday.date(), "away": row.away_team,
-                   "home": row.home_team, "mu": mu[j], "sigma": sigma[j],
-                   "p_home": p_home[j], "mkt_home": None, "mkt_away": None,
-                   "spread_line": getattr(row, "spread_line", None),
-                   "verdict": "no price", "kick_iso": kick}
-            ev = rd.match_event(prices, row.away_team, row.home_team)
-            if ev:
-                hp = ev.get(row.home_team)
-                if hp and hp.get("ask") is not None:
-                    rec["mkt_home"] = hp["ask"]
-                    e = p_home[j] - hp["ask"] - rd.kalshi_fee(hp["ask"])
-                    ap = ev.get(row.away_team)
-                    if ap and ap.get("ask") is not None:
-                        rec["mkt_away"] = ap["ask"]
-                    ea = ((1 - p_home[j]) - ap["ask"] - rd.kalshi_fee(ap["ask"])
-                          if ap and ap.get("ask") is not None else -1)
-                    best = max(e, ea)
-                    side = row.home_team if e >= ea else row.away_team
-                    rec["edge"] = best
-                    if best > edge_threshold:
-                        rec["verdict"] = f"HIGH VALUE &mdash; {side}"
-                    elif best > 0:
-                        rec["verdict"] = f"CAUTIOUS &mdash; small edge on {side}"
-                    else:
-                        rec["verdict"] = "NO VALUE at current price"
-            week_rows.append(rec)
+        table = rd.rundown(df=df, db_path=db_path, horizon_days=horizon_days,
+                           edge_threshold=edge_threshold, html_out=None,
+                           use_live_prices=True, log_path=None)
+        if table is None and len(future):
+            first = future["gameday"].min()
+            span = int((first - today).days) + 7
+            table = rd.rundown(df=df, db_path=db_path, horizon_days=span,
+                               edge_threshold=edge_threshold, html_out=None,
+                               use_live_prices=True, log_path=None)
+    if table is not None and len(table):
+        started_keys = {(r.gameday.date(), r.away_team, r.home_team)
+                        for r in excluded_live.itertuples()}
+        live = table["price_age_min"].notna().any() and (table["price_age_min"].fillna(1e9) <= 2).any()
+        price_age = ('<p class="sub">Market prices fetched live at build time.</p>' if live else "")
+        for r in table.to_dict("records"):
+            if (r["date"], r["away"], r["home"]) in started_keys:
+                continue
+            v = str(r.get("verdict", ""))
+            # The rundown's vocabulary (CANDIDATE X / pass / STALE ...) mapped
+            # to the card's stored strings; the card decides the word.
+            if v.startswith("CANDIDATE "):
+                r["verdict"] = f"HIGH VALUE &mdash; {v.split(' ', 1)[1].strip()}"
+            elif v == "pass":
+                r["verdict"] = "NO VALUE at current price"
+            elif v == "no price":
+                r["verdict"] = "no price"
+            week_rows.append(r)
         parlays = build_parlays(week_rows)
 
     cards = "".join(game_card(r) for r in week_rows) or \

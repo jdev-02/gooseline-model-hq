@@ -17,6 +17,7 @@ from scipy.stats import norm
 from src.core.kalshi import kalshi_fee
 from src.mlb.compile import DATA
 from src.site.names import mlb as nick
+from src.mlb import labels
 
 FIG = Path("figures/mlb/phase0")
 RUNLINE_JUICE = 1.87   # a typical MLB run-line price, decimal
@@ -163,13 +164,22 @@ def game_card(r):
                    f'<span class="warn">Picking a team to win {ml_record()} &mdash; '
                    f'that is why this is marked risky, not a bet.</span></div>')
 
-    # ---- headline ----
+    # ---- headline: the word is decided by the market's live record ----
     if tot_bet:
-        tier, badge = "bet", f'<span class="verdict v-high">BET &middot; {what}</span>'
-        # The moneyline paragraph goes under Details on a BET card: the card
-        # is about the total, and one "also" line is enough up top.
+        if labels.bet_allowed("TOTAL"):
+            tier, badge = "bet", f'<span class="verdict v-high">BET &middot; {what}</span>'
+        else:
+            tier, badge = "risky", f'<span class="verdict v-caut">RISKY &middot; {what}</span>'
+            tot_line += (f'<div class="how"><span class="warn">Betting totals like this '
+                         f'{labels.record_phrase("TOTAL")}. Not a bet yet: '
+                         f'{labels.why_not_bet("TOTAL")}.</span></div>')
         body = tot_line + (f'<div class="also">Also cheap, but risky: {nick(vside)} to win '
                            f'(see Details).</div>' if ml_line else "")
+        also = ""
+    elif v.startswith("STALE"):
+        tier, badge = "stale", '<span class="verdict v-caut">PRICE STALE &middot; re-check</span>'
+        body = ('<div class="how">The price we saw is too old to act on. Open Kalshi and look '
+                'before you buy anything here.</div>')
         also = ""
     elif ml_line:
         tier, badge = "risky", f'<span class="verdict v-caut">RISKY &middot; {nick(vside)} to win</span>'
@@ -263,7 +273,7 @@ def game_card(r):
     details = f'<details class="why"><summary>Details</summary>{"".join(d)}</details>'
 
     kick = str(r.get("kick_iso") or "")
-    return (f'<div class="card tier-{tier}"><div class="match"><span class="teams">{A} at {H}</span>'
+    return (f'<div class="card tier-{tier}" data-teams="{away}@{home}"><div class="match"><span class="teams">{A} at {H}</span>'
             f'<span class="date" data-kick="{kick}">{r["date"]}</span></div>'
             f'<div class="leadv">{badge}</div>{body}{also}{who}{details}</div>')
 
@@ -314,19 +324,9 @@ def _history():
 
 
 def ml_record():
-    """The live moneyline record, from the same file Live Bet Performance
-    renders, so prose and table can never disagree. Returns a phrase."""
-    p = DATA / "paper_trades.csv"
-    if not p.exists():
-        return "has no settled bets yet"
-    t = pd.read_csv(p)
-    t = t[t["market"].astype(str).str.upper() == "ML"]
-    if not len(t) or not t["stake"].sum():
-        return "has no settled bets yet"
-    roi = 100 * t["pnl"].sum() / t["stake"].sum()
-    w = int(t["won"].sum())
-    return (f"has returned {roi:+.1f}% over {len(t)} settled bets ({w}-{len(t) - w}) "
-            f"since 2026-08-27")
+    """The live moneyline record phrase (src/mlb/labels.py), from the same
+    file Live Bet Performance renders, so prose and table cannot disagree."""
+    return labels.record_phrase("ML")
 
 
 def live_performance_html():
@@ -563,15 +563,7 @@ def health_strip(health):
 
 
 def card_tier(r):
-    te = r.get("total_edge")
-    tcall = str(r.get("total_call") or "")
-    if (tcall and not tcall.startswith("no edge") and te is not None
-            and not pd.isna(te) and float(te) > 0.04):
-        return "bet"
-    v = str(r.get("verdict", ""))
-    if v.startswith("HIGH VALUE") and r.get("mkt_home") is not None and not pd.isna(r.get("mkt_home")):
-        return "risky"
-    return "none"
+    return labels.tier_for(r)
 
 
 def tier_buttons(slate, scope):
@@ -580,7 +572,8 @@ def tier_buttons(slate, scope):
     from collections import Counter
     counts = Counter(card_tier(r) for r in slate)
     spec = [("all", "All games", len(slate)), ("bet", "Bets", counts.get("bet", 0)),
-            ("risky", "Risky", counts.get("risky", 0)), ("none", "No bet", counts.get("none", 0))]
+            ("risky", "Risky", counts.get("risky", 0)), ("stale", "Stale price", counts.get("stale", 0)),
+            ("none", "No bet", counts.get("none", 0))]
     btns = "".join(
         f'<button id="tier-{scope}-{k}" class="bandbtn{" on" if k == "all" else ""}"'
         f'{"" if n or k == "all" else " disabled"} onclick="mtier(\'{k}\',\'{scope}\')">'
@@ -615,11 +608,13 @@ def render(slate, today, health=None):
 <div id="mweek" class="panel on">
 <h2>Today's Slate</h2>
 <p class="sub">Three words. <b style="color:var(--green)">BET</b> is a bet we would make
-today: what to buy, the price, and what makes it win are on the card. <b
-style="color:var(--yellow)">RISKY</b> means a team looks cheaper than it should be, but
-picking a team to win {ml_record()} &mdash; so it is your call, not ours. <b>NO BET</b>
-means the price is fair. Tap <b>Details</b> on any card for the numbers. Always check the
-lineup before you buy: the model cannot see a late scratch.</p>
+today. A market earns that word from its own record, not from us: at least
+{labels.MIN_BETS} settled bets, profitable overall and over the most recent half.
+<b style="color:var(--yellow)">RISKY</b> means the model thinks something is cheaper than
+it should be, in a market that has not earned it. Picking a team to win
+{labels.record_phrase("ML")}. Betting total runs {labels.record_phrase("TOTAL")}.
+<b>NO BET</b> means the price is fair. Tap <b>Details</b> on any card for the numbers.
+Always check the lineup before you buy: the model cannot see a late scratch.</p>
 {tiers}
 <div class="grid">{cards}</div>
 </div>

@@ -210,7 +210,11 @@ def stage_site(rep, today):
     sched, _ = _todays_schedule(today)
     if sched is not None and len(sched):
         up = sched[sched["status"].isin(UPCOMING_STATES)]
-        shown = [f"{r.away} @ {r.home}" for r in up.itertuples() if f"{r.away} @ {r.home}" in html]
+        # Cards carry the team codes in data-teams; the visible header is now
+        # the nicknames ("Giants at Cardinals"), which this check must not
+        # depend on.
+        shown = [f"{r.away} @ {r.home}" for r in up.itertuples()
+                 if f'data-teams="{r.away}@{r.home}"' in html or f"{r.away} @ {r.home}" in html]
         rep.add("site shows every upcoming game", len(shown) == len(up),
                 f"{len(shown)}/{len(up)} matchups found in docs/index.html")
     rep.add("site has a freshness strip", 'class="health ' in html, "health strip rendered", hard=False)

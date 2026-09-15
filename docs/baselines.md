@@ -195,8 +195,26 @@ now prices the under off the bid and logs `mkt_under_X`; this backtest
 must be re-run against bid-priced unders (the snapshot db carries bids)
 before the totals result is quoted again. The OVER rows are unaffected.
 
-**Verdict: unknown, not alive.** Totals is the only market not proven
-worse than Kalshi, and the only one worth continuing to track. It is not
+### Totals against Kalshi, under priced off the bid (re-run 2026-09-15, 145 games)
+
+| Line | Brier, pooled | ≥4% paper, under off bid | 1st half | 2nd half |
+|---|---|---|---|---|
+| O/U 7.5 | Kalshi 0.2326 = model 0.2326 | 37 bets, **−6.2%** | +3.6% | **−17.8%** |
+| O/U 8.5 | **Kalshi** 0.2436 < model 0.2448 | 32 bets, +6.8% | +27.6% | **−20.0%** |
+| O/U 9.5 | **Kalshi** 0.2449 < model 0.2468 | 35 bets, +7.6% | +31.2% | **−14.7%** |
+
+At 145 games Kalshi's Brier is better at every line, and every line's
+second half is negative. The pooled positive ROI is the first half, the
+sample the idea was born on. The ask-priced version (the "old" line in the
+script) flattered 7.5 by 10 points and the under side generally.
+
+**Verdict: not alive.** No market in either sport has beaten Kalshi.
+The site now says so by rule rather than by prose: a market shows BET only
+when its live paper trade (`data/mlb/paper_trades.csv`) has ≥100 settled
+bets, positive overall and positive over the most recent half
+(`src/mlb/labels.py`). Everything the model flags in a market that has not
+earned that is RISKY, with the market's record on the card. Totals at
+79 settled bets (+1.9%, recent +4.0%) has not earned it. It is not
 bettable on 85 games. It needs several hundred, and it needs the inputs
 that actually move totals and that the market may under-price: home-plate
 umpire, weather and wind at outdoor parks, posted lineups. Those are the

@@ -92,6 +92,17 @@ def feature_contributions(model, X, neutral):
 STALE_MINUTES = 15
 
 
+def _kick_iso(row):
+    """Kickoff as a UTC instant from gameday + gametime (Eastern, nflverse)."""
+    try:
+        gt = getattr(row, "gametime", None)
+        gt = gt if isinstance(gt, str) and gt else "13:00"
+        return (pd.Timestamp(f"{row.gameday.date()} {gt}")
+                .tz_localize("America/New_York").tz_convert("UTC").isoformat())
+    except Exception:
+        return ""
+
+
 def nfl_event_key(event_ticker, market_ticker):
     """parse_event callback for core.kalshi.live_prices."""
     m = TICKER_RE.match(event_ticker or "")
@@ -252,8 +263,13 @@ def render_html(table, trained_through, out_path="rundown.html"):
 def rundown(games_path="data/nfl/games.csv", stats_path="data/nfl/team_game_stats.csv",
             db_path="data/kalshi_prices.db", horizon_days=8, edge_threshold=0.04,
             html_out=None, use_live_prices=True,
-            log_path="data/nfl/rundown_log.csv"):
-    df = build_frame(games_path, stats_path)
+            log_path="data/nfl/rundown_log.csv", df=None):
+    # `df` lets the site build pass the frame it already built for the
+    # Track Record, so the cards it renders are exactly this function's
+    # rows -- one fit, one price fetch, one verdict -- instead of a second
+    # implementation that had already drifted (code review, 2026-09-15).
+    if df is None:
+        df = build_frame(games_path, stats_path)
     from src.core.clock import slate_today
     today = slate_today()
     window = df[df["result"].isna()
@@ -309,7 +325,9 @@ def rundown(games_path="data/nfl/games.csv", stats_path="data/nfl/team_game_stat
                "epi_sig": round(np.sqrt(epi[j]), 2),
                "p_home": round(p_home[j], 3),
                "mkt_home": None, "mkt_away": None, "edge": None, "verdict": "no price",
-               "price_age_min": None}
+               "price_age_min": None,
+               "spread_line": getattr(row, "spread_line", None),
+               "kick_iso": _kick_iso(row)}
         ev = match_event(prices, row.away_team, row.home_team)
         if ev:
             side = None

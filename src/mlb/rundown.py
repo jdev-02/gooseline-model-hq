@@ -345,6 +345,13 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
                 rec["total_edge"] = round(float(best_t), 3)
                 rec["total_call"] = (best_desc if best_t > edge_threshold
                                      else f"no edge (best {best_desc})")
+        # The word a reader sees, decided by each market's live record
+        # (src/mlb/labels.py). Logged here so the public feed and anyone
+        # rendering it (David's MLB tab) carry the same label as our page.
+        from src.mlb.labels import tier_for, label_for
+        from src.site.names import mlb as _nick
+        rec["tier"] = tier_for(rec)
+        rec["label"] = label_for(rec, _nick)
         rows.append(rec)
     table = pd.DataFrame(rows)
     trained = df[df["y"].notna()]

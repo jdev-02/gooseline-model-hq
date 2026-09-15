@@ -56,7 +56,13 @@ uv run python -c "from src.mlb.compile import *; ..."   # see run_phase0 / READM
   list from the last `run_phase0`.
 - `data/mlb/narrative/YYYY-MM-DD.yaml` + `log.csv` — human tilts and every
   rundown row (model-only and model+narrative), with `result` filled in after
-  the game.
+  the game. Since 2026-09-15 each row also carries `tier` (`bet` / `risky` /
+  `stale` / `none`) and `label` (the exact words on the card, e.g.
+  `RISKY · Giants to win`), decided by `src/mlb/labels.py` from the live
+  paper-trade record. Anyone rendering this feed elsewhere should show
+  `label`, not derive a word from `verdict`: `verdict` is the raw
+  HIGH VALUE / CAUTIOUS / NO VALUE string the backtests parse, and HIGH VALUE
+  on a moneyline is a losing record, not a recommendation.
 
 ## Kalshi tickers
 

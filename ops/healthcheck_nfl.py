@@ -180,7 +180,9 @@ def stage_site(rep, today):
     now = pd.Timestamp.now(tz="UTC")
     live_but_shown, missing = [], []
     for r in upcoming.itertuples():
-        label_variants = (f"{r.away_team} @ {r.home_team}", f"{r.away_team}@{r.home_team}")
+        # Cards carry the codes in data-teams; the visible header is nicknames.
+        label_variants = (f'data-teams="{r.away_team}@{r.home_team}"',
+                          f"{r.away_team} @ {r.home_team}")
         shown = any(v in html for v in label_variants)
         ko = _kickoff_utc(r.gameday.date(), getattr(r, "gametime", None))
         started = ko is not None and now >= ko
