@@ -28,9 +28,17 @@ CONTEXT_COLS = ["log_park_factor", "day_night", "rest_diff", "div_game"]
 KALMAN_COLS = ["kalman_diff", "kalman_var"]
 TIER_A_COLS = KALMAN_COLS + MOMENTUM_COLS + CONTEXT_COLS
 MLB_FEATURE_COLS = TIER_A_COLS + PITCHER_COLS
+# Skill block (2026-09-15): the box-score-derivable subset of what a lasso on
+# 2010-2025 team seasons kept as World Series predictors -- offensive
+# strikeout rate, ISO (power), and staff strikeout rate. Computed always,
+# shipped only if the walk-forward gate improves (ops/experiment_skill_feats.py).
+SKILL_COLS = ["off_k_diff", "iso_diff", "pit_k_diff"]
 
 FIP_LEAGUE_DEFAULT = 4.20
 STRIKE_PCT_DEFAULT = 0.64
+OFF_K_DEFAULT = 0.22      # league offensive K per PA
+ISO_DEFAULT = 0.15
+PIT_K_DEFAULT = 0.22      # league pitching K per batter faced
 
 
 def _decay(h):
@@ -79,6 +87,9 @@ def build_features(df, team_lookup=None, pitcher_stats=None, park_fn=None,
     late = {}                    # team -> EWMA late-inning run diff
     press = {}                   # team -> (EWMA brpi_off, EWMA brpi_def)
     lobr = {}                    # team -> EWMA lob rate
+    offk = {}                    # team -> EWMA offensive K / PA
+    iso = {}                     # team -> EWMA (2B + 2*3B + 3*HR) / AB
+    pitk = {}                    # team -> EWMA staff K / BF
     # --- pitcher state (Tier B) ---
     sp_fip = {}                  # pitcher_id -> _Ewma of FIP numerator/IP
     sp_cmd = {}                  # pitcher_id -> _Ewma strike pct
@@ -95,7 +106,7 @@ def build_features(df, team_lookup=None, pitcher_stats=None, park_fn=None,
         for key, grp in pitcher_stats.groupby("game_id"):
             pit_by_game[key] = grp
 
-    cols = {c: np.zeros(n) for c in MOMENTUM_COLS + PITCHER_COLS + ["log_park_factor"]}
+    cols = {c: np.zeros(n) for c in MOMENTUM_COLS + PITCHER_COLS + SKILL_COLS + ["log_park_factor"]}
 
     def g(dct, k, default=0.0):
         return dct.get(k, default)
@@ -110,6 +121,12 @@ def build_features(df, team_lookup=None, pitcher_stats=None, park_fn=None,
         cols["lob_rate_diff"][i] = g(lobr, a) - g(lobr, h)
         cols["late_inning_diff"][i] = g(late, h) - g(late, a)
         cols["log_park_factor"][i] = park_fn(r.venue_id, r.season) if park_fn else 0.0
+        # Skill block, oriented so positive favors home: fewer strikeouts
+        # on offense is good (away minus home); more power and more staff
+        # strikeouts are good (home minus away).
+        cols["off_k_diff"][i] = g(offk, a, OFF_K_DEFAULT) - g(offk, h, OFF_K_DEFAULT)
+        cols["iso_diff"][i] = g(iso, h, ISO_DEFAULT) - g(iso, a, ISO_DEFAULT)
+        cols["pit_k_diff"][i] = g(pitk, h, PIT_K_DEFAULT) - g(pitk, a, PIT_K_DEFAULT)
 
         lg_c = (lg_er / lg_ip * 9.0 - lg_num / lg_ip) if lg_ip > 100 else FIP_LEAGUE_DEFAULT - 0.0
         lg_fip = FIP_LEAGUE_DEFAULT if lg_ip <= 100 else (lg_num / lg_ip + lg_c)
@@ -164,6 +181,16 @@ def build_features(df, team_lookup=None, pitcher_stats=None, park_fn=None,
                 press[team] = (d_press * po + (1 - d_press) * float(obs.brpi_off),
                                d_press * pdf_ + (1 - d_press) * float(obs.brpi_def))
                 lobr[team] = d_form * g(lobr, team) + (1 - d_form) * float(obs.lob_rate_off)
+                pa_ = float(getattr(obs, "pa", 0) or 0)
+                ab_ = float(getattr(obs, "ab", 0) or 0)
+                bf_ = float(getattr(obs, "p_bf", 0) or 0)
+                if pa_ > 0:
+                    offk[team] = d_form * g(offk, team, OFF_K_DEFAULT) + (1 - d_form) * float(obs.so or 0) / pa_
+                if ab_ > 0:
+                    xb = (float(obs.doubles or 0) + 2 * float(obs.triples or 0) + 3 * float(obs.home_runs or 0))
+                    iso[team] = d_form * g(iso, team, ISO_DEFAULT) + (1 - d_form) * xb / ab_
+                if bf_ > 0:
+                    pitk[team] = d_form * g(pitk, team, PIT_K_DEFAULT) + (1 - d_form) * float(obs.p_so or 0) / bf_
         else:
             # Tier-A proxy: hits + LOB from the linescore
             for team, hits, lob in ((h, r.home_hits, r.home_lob), (a, r.away_hits, r.away_lob)):

@@ -277,6 +277,43 @@ contract, costed at 1 − bid), log `spread_call` / `spread_edge` /
 record accrues under Live Bet Performance; the card word for the run line
 is decided by that record like the other two markets.
 
+### Team skill block: offensive K%, ISO, staff K% (`ops/experiment_skill_feats.py`, run 2026-09-15)
+
+A public analysis of World Series winners 2010–2025 (season z-scores, lasso
+logistic, 15 positives in 450 team seasons) kept wRC+/xwOBA, starter
+ERA/xERA, offensive strikeout rate, DRS/OAA, ISO and bullpen swinging-strike
+rate. Three of those are free from the boxscores we already hold, so they
+were built as per-team EWMAs in the causal feature loop (`SKILL_COLS` in
+`src/mlb/features.py`: `off_k_diff` = opponent K/PA − own, `iso_diff`,
+`pit_k_diff` = staff K/BF, all oriented positive-favors-home) and put
+through the same gate as everything else: tune on 2022, walk forward
+2023–2025 weekly refits, same frozen Kalman.
+
+| Arm | NLL | RMSE | Brier | max calib dev |
+|---|---|---|---|---|
+| A. shipped set, ridge | 2.9071 | 4.428 | 0.2433 | 0.066 |
+| B. A + skill, ridge | 2.9072 | 4.429 | 0.2434 | 0.073 |
+| C. A + skill, lasso (α=0.002) | 2.9072 | 4.429 | 0.2435 | 0.077 |
+
+The raw signal is there (correlation with home margin over 2015+:
+`pit_k_diff` 0.14, `iso_diff` 0.11, `off_k_diff` 0.06) but it is already
+carried by the Kalman rating, the FIP block and the form EWMAs; adding it
+changes nothing at the fourth decimal and loosens calibration slightly.
+The lasso arm, which is the method the source used, prunes to the same
+answer. **Not shipped**: the columns are computed and tested
+(`tests/test_mlb_skill_feats.py`) but stay out of `MLB_FEATURE_COLS`.
+
+What that analysis found is a *season-level* ranking of who is built for
+October, which is not the same question as who wins tonight, and the
+market already knows both. The remaining candidates from it need new
+ingest: xwOBA / xERA / OAA from Baseball Savant (a per-team-season CSV
+export, cheap; per-game splits need the statcast search endpoint), and
+bullpen swinging-strike rate needs pitch-level data. Neither is worth
+building for the moneyline, which is dead on this feature set regardless;
+the only place they could matter is totals, where xwOBA-against by the
+probable starter is the one untested input. Logged as the next totals
+experiment after lineups.
+
 ### Where this leaves the mandate
 
 | Market | Result | Status |
