@@ -471,8 +471,8 @@ def _how(r, kind, what, edge):
         rec = "The spread pick covered 49.2% over five seasons against a 52.4% breakeven"
     ptxt = f" at <b>{_cents(cost)}</b>" if _num(cost) else ""
     return (f'<div class="how pass">The model likes <b>{_pretty(kind, what)}</b>{ptxt} '
-            f'(edge {edge*100:+.1f}% after fees; it wins if {wins}), but {rec[0].lower() + rec[1:]} '
-            f'&mdash; <b>sit this one out</b>.</div>')
+            f'(edge {edge*100:+.1f}% after fees), but {rec[0].lower() + rec[1:]}. '
+            f'<b>Sit this one out</b>.</div>')
 
 
 def game_card(r):
@@ -585,10 +585,13 @@ def card_tier(r):
 
 def start_here(rows):
     n = sum(len(_nfl_flags(r)) for r in rows)
+    run = str(next((r.get("run_ts") for r in rows if r.get("run_ts")), "") or
+              pd.Timestamp.utcnow().isoformat(timespec="seconds"))
     why = (f' The model likes {n} side{"s" if n != 1 else ""} this week; every one is marked PASS '
            f'on its card with the edge, because no football market here has beaten Kalshi in '
            f'testing.') if n else ""
-    return f'<div class="start"><b>Start here:</b> nothing to bet this week.{why}</div>'
+    return (f'<div class="start" id="start-nfl" data-run="{run}"><b>Start here:</b> '
+            f'nothing to bet this week.{why}</div>')
 
 
 def tier_buttons(rows, scope):

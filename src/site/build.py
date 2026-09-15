@@ -70,6 +70,19 @@ img.fig{max-width:100%;border-radius:8px;border:1px solid var(--line)}
 .health li.warn{color:var(--yellow)}
 .health li.fail{color:#e5484d;font-weight:700}
 .two{display:grid;gap:12px}@media(min-width:700px){.two{grid-template-columns:1fr 1fr}}
+/* Live pill in the sticky nav: how many Start-here bets are still open, when
+   the next one closes, how old the prices are. Computed on the reader's clock
+   from data-kick / data-run; the page itself does not change between runs. */
+.livepill{margin-left:auto;align-self:center;font:600 .74rem "Segoe UI",sans-serif;
+  padding:5px 11px;border-radius:99px;border:1px solid var(--green);color:var(--green);
+  background:none;cursor:pointer;white-space:nowrap;letter-spacing:.01em}
+.livepill:hover{background:rgba(46,224,111,.12)}
+.livepill:active{transform:scale(.97)}
+.livepill.none{border-color:var(--dim);color:var(--dim)}
+.livepill.old{border-color:var(--yellow);color:var(--yellow)}
+.start li.gone{opacity:.45;text-decoration:line-through}
+.start .closes{color:var(--dim);font-size:.8rem}
+@media(max-width:760px){.livepill{margin-left:0;width:100%;text-align:center}}
 
 /* Mobile. `justify-content:center` on a horizontally scrolling flex row
    clips the first item past the left edge, which is what cut off the
@@ -119,8 +132,48 @@ function localiseKickoffs(){
       + ', ' + d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit', timeZoneName:'short'});
   });
 }
-if (document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', localiseKickoffs); }
-else { localiseKickoffs(); }
+/* The live pill. Each sport page gets one in its sticky nav, so it follows
+   the reader down the slate. It re-reads the Start-here list every 30 s:
+   bets whose first pitch has passed are struck through, the count drops,
+   the next close is shown on the reader's clock, and the price age turns
+   yellow past 90 min. Nothing here fetches anything; between runs the
+   numbers on the page are the numbers from the last run. */
+function fmtTime(d){ return d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}); }
+function livePill(){
+  var now = Date.now();
+  document.querySelectorAll('.page').forEach(function(page){
+    var nav = page.querySelector('nav'); var box = page.querySelector('.start');
+    if (!nav || !box) return;
+    var pill = nav.querySelector('.livepill');
+    if (!pill){
+      pill = document.createElement('button'); pill.className = 'livepill'; pill.type = 'button';
+      pill.title = 'Jump to Start here';
+      pill.onclick = function(){
+        var slateTab = page.querySelector('nav button'); if (slateTab) slateTab.click();
+        box.scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start'});
+      };
+      nav.appendChild(pill);
+    }
+    var open = 0, next = null;
+    box.querySelectorAll('li[data-kick]').forEach(function(li){
+      var t = Date.parse(li.dataset.kick); var c = li.querySelector('.closes');
+      if (isNaN(t)){ return; }
+      if (t <= now){ li.classList.add('gone'); if (c) c.textContent = 'Started; too late.'; return; }
+      open++; if (next === null || t < next) next = t;
+      if (c){ var m = Math.round((t - now) / 60000);
+        c.textContent = 'Closes ' + fmtTime(new Date(t)) + (m < 120 ? ' (' + m + ' min)' : '') + '.'; }
+    });
+    var run = Date.parse(box.dataset.run || ''); var age = isNaN(run) ? null : Math.round((now - run) / 60000);
+    var agetxt = age === null ? '' : ' · prices ' + (age < 1 ? 'just now' : age < 90 ? age + ' min old' : Math.round(age/60) + ' h old');
+    var total = box.querySelectorAll('li[data-kick]').length;
+    pill.textContent = total ? (open + ' of ' + total + ' bets open' + (next ? ' · next closes ' + fmtTime(new Date(next)) : '') + agetxt)
+                             : 'Nothing to bet' + agetxt;
+    pill.className = 'livepill' + (total && open ? '' : ' none') + (age !== null && age >= 90 ? ' old' : '');
+  });
+}
+function siteReady(){ localiseKickoffs(); livePill(); setInterval(livePill, 30000); }
+if (document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', siteReady); }
+else { siteReady(); }
 function mtab(id){
   document.querySelectorAll('#page-mlb .panel').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('#page-mlb nav button').forEach(b=>b.classList.remove('on'));

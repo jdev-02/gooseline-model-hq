@@ -149,11 +149,11 @@ def _how(r, kind, tier, what, edge):
     ptxt = f" at <b>{_cents(cost)}</b>" if _num(cost) else ""
     if tier == "pass":
         s = (f'The model likes <b>{_pretty(kind, what)}</b>{ptxt} (edge {edge*100:+.1f}% after fees), '
-             f'but {_KIND_VERB[kind].lower()} {labels.record_phrase(kind)} &mdash; '
-             f'<b>sit this one out</b>: {labels.why_not_bet(kind)}.')
+             f'but {_KIND_VERB[kind].lower()} {labels.record_phrase(kind)}. '
+             f'<b>Sit this one out</b>: {labels.why_not_bet(kind)}.')
         return f'<div class="how pass">{s}</div>'
     s = (f'Buy <b>{_pretty(kind, what)}</b>{ptxt} on Kalshi, <b>{labels.UNIT[tier]}</b>. '
-         f'It wins if {wins}. Edge {edge*100:+.1f}% after fees.')
+         f'Edge {edge*100:+.1f}% after fees.')
     if tier == "small":
         s += (f' <span class="warn">Half a unit because {_KIND_VERB[kind].lower()} '
               f'{labels.record_phrase(kind)}: {labels.why_not_bet(kind)}.</span>')
@@ -165,23 +165,32 @@ def start_here(slate):
     best first, each one an instruction. Empty means sit the day out, and
     the box says so instead of hiding."""
     ranked = labels.ranked(slate)
+    # Price age for the live pill. Rows carry run_ts once logged; the site is
+    # built in the same job minutes after pricing, so build time is the
+    # fallback and is honest to within that window.
+    run = str(next((r.get("run_ts") for r in slate if r.get("run_ts")), "") or
+              pd.Timestamp.utcnow().isoformat(timespec="seconds"))
     if not ranked:
         n = sum(1 for r in slate for _ in labels.market_flags(r))
         why = (f' The model likes {n} side{"s" if n != 1 else ""} today, all in markets '
                f'that have lost money in live betting; they are marked PASS on the cards '
                f'so you can see them, and the record says not to buy them.') if n else ""
-        return (f'<div class="start"><b>Start here:</b> nothing to bet today.{why}</div>')
+        return (f'<div class="start" id="start-mlb" data-run="{run}"><b>Start here:</b> '
+                f'nothing to bet today.{why}</div>')
     items = []
     for i, (r, (kind, tier, what, edge)) in enumerate(ranked, 1):
         cost, wins = _market_price_and_wins(r, kind, what)
         ptxt = f" at {_cents(cost)}" if _num(cost) else ""
+        kick = str(r.get("kick_iso") or "")
         items.append(
-            f'<li><span class="verdict {_WORD[tier][1]} mini">{_WORD[tier][0]}</span> '
-            f'<b>{_pretty(kind, what)}</b>{ptxt}, {labels.UNIT[tier]} &mdash; '
-            f'{nick(r["away"])} at {nick(r["home"])}. Wins if {wins}. Edge {edge*100:+.1f}%.</li>')
-    return (f'<div class="start"><b>Start here</b> &mdash; {len(items)} '
+            f'<li data-kick="{kick}"><span class="verdict {_WORD[tier][1]} mini">{_WORD[tier][0]}</span> '
+            f'<b>{_pretty(kind, what)}</b>{ptxt}, {labels.UNIT[tier]}: '
+            f'{nick(r["away"])} at {nick(r["home"])}. Edge {edge*100:+.1f}%. '
+            f'<span class="closes" data-kick="{kick}"></span></li>')
+    return (f'<div class="start" id="start-mlb" data-run="{run}"><b>Start here</b>: {len(items)} '
             f'bet{"s" if len(items) != 1 else ""} today, best first. A unit is whatever you '
-            f'decided a unit is before you opened this page.<ol>{"".join(items)}</ol></div>')
+            f'decided a unit is before you opened this page. A bet closes at first pitch.'
+            f'<ol>{"".join(items)}</ol></div>')
 
 
 def game_card(r):
@@ -425,7 +434,7 @@ def live_performance_html():
 <p class="sub">Every game the model flagged HIGH VALUE, staked at a flat $15 and settled
 against the real final score, updated automatically every morning by the same run that
 prices tomorrow's slate. This is a record of what following the site would have earned,
-not the walk-forward backtest below &mdash; it started 2026-08-27 and is still a small
+not the walk-forward backtest below. It started 2026-08-27 and is still a small
 sample. Treat the win rate honestly and the dollar figure as a rough slippage estimate
 until this has run for a full season.</p>
 <div class="metrics-row">
