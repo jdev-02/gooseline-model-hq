@@ -143,13 +143,12 @@ def latest_prices(db_path):
     return prices
 
 
-KALSHI_ALIASES = {"LA": ["LAR", "LA"], "JAX": ["JAX", "JAC"],
-                  "WAS": ["WAS", "WSH"], "LV": ["LV", "LVR"]}
-
-
 def match_event(prices, away, home):
-    for a in KALSHI_ALIASES.get(away, [away]):
-        for h in KALSHI_ALIASES.get(home, [home]):
+    """Kalshi may spell a team differently from nflverse; every alias comes
+    from the one registry (src/core/teams.py), not a dict kept here."""
+    from src.core.teams import aliases
+    for a in aliases("nfl", away):
+        for h in aliases("nfl", home):
             ev = prices.get(f"{a}{h}")
             if ev:
                 if a != away or h != home:
@@ -378,7 +377,10 @@ def rundown(games_path="data/nfl/games.csv", stats_path="data/nfl/team_game_stat
                 rec["verdict"] = "pass"
         out.append(rec)
 
-    table = pd.DataFrame(out).sort_values(["date", "home"])
+    # Deterministic slate order: kickoff instant, then away, then home.
+    from src.core.teams import slate_sort_key
+    out.sort(key=slate_sort_key)
+    table = pd.DataFrame(out)
     if log_path:
         # Same discipline as the MLB side: every verdict is recorded with the
         # price it was computed against, so paper trading can settle it later.

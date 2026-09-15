@@ -56,12 +56,31 @@ def fetch_season_schedule(season, cache_dir=RAW, force=False, session=None):
         with gzip.open(fp, "rt", encoding="utf-8") as f:
             return json.load(f)
     session = session or requests.Session()
-    data = get_json(session, "/schedule", {
-        "sportId": 1, "season": season, "gameType": "R", "hydrate": SCHEDULE_HYDRATE})
+    marker = fp.parent / f".{season}.source"
+    try:
+        data = get_json(session, "/schedule", {
+            "sportId": 1, "season": season, "gameType": "R", "hydrate": SCHEDULE_HYDRATE})
+    except Exception as e:
+        # StatsAPI down is not a reason to have no slate. Serve the last good
+        # pull and say so in a marker the health gate reads, so the page
+        # reports "schedule from cache" instead of failing the day.
+        if fp.exists():
+            print(f"statsapi unreachable ({e}); serving cached schedule {fp.name}", file=sys.stderr)
+            fp.parent.mkdir(parents=True, exist_ok=True)
+            marker.write_text(f"cache {_now_iso()}")
+            with gzip.open(fp, "rt", encoding="utf-8") as f:
+                return json.load(f)
+        raise
     fp.parent.mkdir(parents=True, exist_ok=True)
     with gzip.open(fp, "wt", encoding="utf-8") as f:
         json.dump(data, f)
+    marker.write_text(f"statsapi {_now_iso()}")
     return data
+
+
+def _now_iso():
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def fetch_live_schedule(start_date, end_date, session=None):

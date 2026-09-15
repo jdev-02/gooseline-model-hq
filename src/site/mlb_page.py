@@ -582,6 +582,8 @@ def tier_buttons(slate, scope):
 
 
 def render(slate, today, health=None):
+    from src.core.teams import slate_sort_key
+    slate = sorted(slate, key=slate_sort_key)
     cards = "".join(game_card(r) for r in slate) or \
         '<p class="sub">No games in the upcoming window.</p>'
     tiers = tier_buttons(slate, "mlb") if slate else ""

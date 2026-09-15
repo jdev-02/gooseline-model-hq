@@ -99,8 +99,17 @@ def stage_data(rep, today):
     # 1. The schedule was pulled this run.
     sched, sp = _todays_schedule(today)
     age = _file_age_min(sp)
-    rep.add("schedule refreshed", age is not None and age <= SCHEDULE_MAX_AGE,
-            f"{sp.name} {'missing' if age is None else f'{age:.0f} min old'}")
+    marker = sp.parent / f".{today.year}.source"
+    src = marker.read_text().strip() if marker.exists() else ""
+    if src.startswith("cache"):
+        # StatsAPI was unreachable this run and the last good pull was served.
+        # That is the fallback working, so it is a warning with the age of
+        # the copy, not a failure of the day.
+        rep.add("schedule refreshed", False,
+                f"StatsAPI unreachable; serving cached {sp.name} ({age:.0f} min old)", hard=False)
+    else:
+        rep.add("schedule refreshed", age is not None and age <= SCHEDULE_MAX_AGE,
+                f"{sp.name} {'missing' if age is None else f'{age:.0f} min old'}")
     if sched is None:
         return
     upcoming = sched[sched["status"].isin(UPCOMING_STATES)]

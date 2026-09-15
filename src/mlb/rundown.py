@@ -353,6 +353,9 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
         rec["tier"] = tier_for(rec)
         rec["label"] = label_for(rec, _nick)
         rows.append(rec)
+    # Deterministic slate order: first pitch, then away, then home.
+    from src.core.teams import slate_sort_key
+    rows.sort(key=slate_sort_key)
     table = pd.DataFrame(rows)
     trained = df[df["y"].notna()]
     print(f"\n=== MLB rundown {today.date()} (+{days - 1}d), trained through "

@@ -7,6 +7,12 @@ from datetime import datetime, timezone
 import requests
 
 BASE = "https://external-api.kalshi.com/trade-api/v2"
+# Every host that serves the same read-only trade API, tried in order. One
+# host down should cost a retry, not the day's prices. KALSHI_FALLBACK_BASE
+# lets a deployment add a proxy without a code change.
+import os as _os
+BASES = [b for b in (BASE, "https://api.elections.kalshi.com/trade-api/v2",
+                     _os.environ.get("KALSHI_FALLBACK_BASE")) if b]
 DEFAULT_SERIES = ["KXNFLGAME", "KXNFLSPREAD", "KXNFLTOTAL",
                   "KXMLBGAME", "KXMLBSPREAD", "KXMLBTOTAL"]
 
@@ -31,19 +37,22 @@ CREATE INDEX IF NOT EXISTS idx_snap_ticker_ts ON snapshots (ticker, ts_utc);
 
 
 def get_json(session, path, params=None, retries=3):
-    for attempt in range(retries):
+    """Round-robin over BASES: each attempt uses the next host, so a dead
+    primary is skipped on the second try rather than retried three times."""
+    for attempt in range(retries * len(BASES)):
+        base = BASES[attempt % len(BASES)]
         try:
-            r = session.get(BASE + path, params=params, timeout=30)
+            r = session.get(base + path, params=params, timeout=30)
             if r.status_code == 429:
                 time.sleep(2 ** attempt)
                 continue
             r.raise_for_status()
             return r.json()
         except requests.RequestException as e:
-            if attempt == retries - 1:
+            if attempt == retries * len(BASES) - 1:
                 raise
-            print(f"  retry {attempt + 1} after error: {e}", file=sys.stderr)
-            time.sleep(2 ** attempt)
+            print(f"  retry {attempt + 1} ({base}) after error: {e}", file=sys.stderr)
+            time.sleep(min(2 ** (attempt // len(BASES)), 8))
 
 
 def price(market, dollars_key, cents_key):

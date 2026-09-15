@@ -67,8 +67,16 @@ def _kickoff_utc(gameday, gametime):
 def stage_data(rep, today):
     gp = DATA / "games.csv"
     age = _file_age_min(gp)
-    rep.add("games.csv refreshed", age is not None and age <= RUN_MAX_AGE,
-            "missing" if age is None else f"{age:.0f} min old")
+    marker = DATA / ".games_csv_source"
+    src = marker.read_text().strip() if marker.exists() else ""
+    if src.startswith("cache"):
+        # nflverse was unreachable this run; the committed copy was used.
+        # The fallback working is a warning, not a failed day.
+        rep.add("games.csv refreshed", False,
+                f"nflverse unreachable; using committed games.csv ({age:.0f} min old)", hard=False)
+    else:
+        rep.add("games.csv refreshed", age is not None and age <= RUN_MAX_AGE,
+                "missing" if age is None else f"{age:.0f} min old")
     if age is None:
         return
     games = pd.read_csv(gp, low_memory=False)

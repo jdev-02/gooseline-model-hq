@@ -34,11 +34,17 @@ jobs:
         # played. Same validation guard David's weekly-site.yml uses, so a
         # truncated or error-page response fails loudly instead of poisoning
         # the model silently.
+        # Two hosts for the same file, then the committed copy. nflverse being
+        # down is a warning on the page, not a day with no slate: the marker
+        # file is read by ops/healthcheck_nfl.py.
         run: |
-          curl -sSfL --retry 3 --retry-delay 5 \
+          set +e
+          ok=0
+          for url in \
             https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv \
-            -o /tmp/games.new.csv
-          uv run python - <<'PY'
+            https://github.com/nflverse/nfldata/raw/master/data/games.csv ; do
+            curl -sSfL --retry 2 --retry-delay 5 "$url" -o /tmp/games.new.csv || continue
+            uv run python - <<'PY' && { ok=1; break; }
           import pandas as pd, sys
           need = {"game_id","season","game_type","week","gameday","home_team",
                   "away_team","result","home_qb_id","away_qb_id","home_rest",
@@ -49,7 +55,14 @@ jobs:
           if len(df) < 7000: sys.exit(f"games.csv looks truncated: {len(df)} rows")
           print(f"games.csv ok: {len(df)} rows through season {df.season.max()}")
           PY
-          mv /tmp/games.new.csv data/nfl/games.csv
+          done
+          if [ "$ok" = "1" ]; then
+            mv /tmp/games.new.csv data/nfl/games.csv
+            echo "nflverse $(date -u +%Y-%m-%dT%H:%M:%SZ)" > data/nfl/.games_csv_source
+          else
+            echo "::warning::nflverse unreachable on every host; using the committed games.csv"
+            echo "cache $(date -u +%Y-%m-%dT%H:%M:%SZ)" > data/nfl/.games_csv_source
+          fi
       - name: refresh EPA for the season in progress
         # team_game_stats.csv used to be built once and never again, so the EPA
         # half of the feature set would freeze while games.csv kept moving.
