@@ -161,12 +161,12 @@ function livePill(){
       if (t <= now){ li.classList.add('gone'); if (c) c.textContent = 'Started; too late.'; return; }
       open++; if (next === null || t < next) next = t;
       if (c){ var m = Math.round((t - now) / 60000);
-        c.textContent = 'Closes ' + fmtTime(new Date(t)) + (m < 120 ? ' (' + m + ' min)' : '') + '.'; }
+        c.textContent = 'Buy before ' + fmtTime(new Date(t)) + (m < 120 ? ' (' + m + ' min)' : '') + '.'; }
     });
     var run = Date.parse(box.dataset.run || ''); var age = isNaN(run) ? null : Math.round((now - run) / 60000);
     var agetxt = age === null ? '' : ' · prices ' + (age < 1 ? 'just now' : age < 90 ? age + ' min old' : Math.round(age/60) + ' h old');
     var total = box.querySelectorAll('li[data-kick]').length;
-    pill.textContent = total ? (open + ' of ' + total + ' bets open' + (next ? ' · next closes ' + fmtTime(new Date(next)) : '') + agetxt)
+    pill.textContent = total ? (open + ' of ' + total + ' bet' + (total === 1 ? '' : 's') + ' open' + (next ? ' · buy before ' + fmtTime(new Date(next)) : '') + agetxt)
                              : 'Nothing to bet' + agetxt;
     pill.className = 'livepill' + (total && open ? '' : ' none') + (age !== null && age >= 90 ? ' old' : '');
   });

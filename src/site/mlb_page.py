@@ -236,7 +236,7 @@ def start_here(slate):
             + f'<span class="closes" data-kick="{kick}"></span></li>')
     return (f'<div class="start" id="start-mlb" data-run="{run}"><b>Start here</b>: {len(items)} '
             f'bet{"s" if len(items) != 1 else ""} today, best first. A unit is whatever you '
-            f'decided a unit is before you opened this page. A bet closes at first pitch.'
+            f'decided a unit is before you opened this page. Each one has to be bought before first pitch.'
             f'<ol>{"".join(items)}</ol></div>')
 
 
