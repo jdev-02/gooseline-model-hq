@@ -99,7 +99,7 @@ def why_not_bet(kind):
         return "the most recent half is negative"
     if r["n"] < SMALL_MIN:
         return f"fewer than {SMALL_MIN} settled bets so far ({r['n']})"
-    return f"profitable, but on fewer than {MIN_BETS} settled bets ({r['n']})"
+    return f"profitable, but on fewer than {MIN_BETS} settled bets"
 
 
 def _num(x):

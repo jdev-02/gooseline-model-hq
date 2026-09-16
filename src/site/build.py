@@ -291,7 +291,7 @@ def build(out="docs/index.html", narrative=None, days=1,
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Model HQ | Gooseline Solutions</title>
 <link rel="icon" type="image/png" href="data:image/png;base64,{_FAVICON_B64}">
-<meta name="description" content="A portfolio project in applied Bayesian forecasting: Kalman team ratings, walk-forward validation and probability calibration on live public sports data. Informational only; not betting advice.">
+<meta name="description" content="A portfolio project in applied Bayesian forecasting: Kalman team ratings, walk-forward validation and probability calibration on live public sports data. Information, not betting advice.">
 <meta name="robots" content="index,follow">
 <style>{nfl.CSS}{SWITCH_CSS}</style>
 <script>{nfl.TABS_JS}{SWITCH_JS}</script></head><body>

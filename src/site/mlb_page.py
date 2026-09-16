@@ -283,8 +283,9 @@ def start_here(slate):
             + f'<span class="closes" data-kick="{kick}"></span></li>')
     return (f'<div class="start" id="start-mlb" data-run="{run}" data-next="{NEXT_RUNS_UTC}">'
             f'<b>Start here</b>: {len(items)} '
-            f'bet{"s" if len(items) != 1 else ""} today, best first. A unit is whatever you '
-            f'decided a unit is before you opened this page. Each one has to be bought before first pitch.'
+            f'bet{"s" if len(items) != 1 else ""} today, best first. A unit is the amount you '
+            f'decided to put on one pick before you looked at today\'s games. Each one has to be '
+            f'bought before first pitch.'
             f'<ol>{"".join(items)}</ol></div>')
 
 
@@ -344,7 +345,7 @@ def game_card(r):
     else:
         tier = "pass"
         badge = '<span class="verdict v-none">PASS</span>'
-        body = ('<div class="how">Every price is fair. Nothing here is worth buying today.</div>'
+        body = ('<div class="how">Every price here is fair, so there is nothing to buy today.</div>'
                 if has_price else '<div class="how">No price on Kalshi yet.</div>')
     if abs(fav_p - 0.5) < 0.005:
         who = '<div class="who">Who we think wins: <b>too close to call</b></div>'
@@ -777,18 +778,19 @@ def render(slate, today, health=None):
 
 <div id="mweek" class="panel on">
 <h2>Today's Slate</h2>
-<p class="sub">Three markets on every card, same order every time: <b>Moneyline</b> (who
-wins), <b>Run line</b> (wins by 2 or more, or loses by no more than 1), <b>Total runs</b>
-(over or under a number). Each gets one of three words, and each word is an instruction.
-<b style="color:var(--green)">BET</b>: one unit. <b style="color:var(--green)">SMALL BET</b>:
-half a unit. <b>PASS</b>: do nothing. A market earns its word from its own live record, not
-from us: BET needs at least {labels.MIN_BETS} settled bets, profitable overall and over the
-most recent half; SMALL BET the same on at least {labels.SMALL_MIN}. When the model likes a
-side in a market that has not earned it, the line still shows the side and the edge, marked
-PASS, so you can see the disagreement without being told to buy it.
-Records so far: picking a team to win {labels.record_phrase("ML")}; the run line
-{labels.record_phrase("SPREAD")}; total runs {labels.record_phrase("TOTAL")}. Tap
-<b>Details</b> on any card for the numbers. Check the lineup before you buy.</p>
+<p class="sub">Every card shows three markets in the same order: <b>Moneyline</b> (who
+wins), <b>Run line</b> (wins by 2 or more, or loses by no more than 1), and <b>Total runs</b>
+(over or under a number). Next to each market is a word that tells you what to do.
+<b style="color:var(--green)">BET</b> means put down one unit; <b style="color:var(--green)">SMALL
+BET</b>, half a unit; <b>PASS</b> means leave it alone.</p>
+<p class="sub">The word comes from the market's own live record. BET needs at least
+{labels.MIN_BETS} settled bets that are profitable overall and over the most recent half,
+and SMALL BET needs the same on at least {labels.SMALL_MIN}. When the model likes a side in
+a market that has not earned its word yet, the line still shows the side and the edge under
+PASS, so you can see the disagreement without being told to buy it.</p>
+<p class="sub">Records so far: picking a team to win {labels.record_phrase("ML")}; the run
+line {labels.record_phrase("SPREAD")}; total runs {labels.record_phrase("TOTAL")}. Tap
+<b>Details</b> on any card for the numbers, and check the lineup before you buy.</p>
 {tiers}
 <div class="grid">{cards}</div>
 </div>
@@ -826,5 +828,5 @@ along with the thrill.</p>
 <div id="mrecord" class="panel">{live_performance_html()}<h2>Track Record</h2>{track_record_html()}</div>
 <div id="mb101" class="panel"><h2>Bayesian 101</h2>{B101.replace("{ML_RECORD}", ml_record())}</div>
 
-<footer>Every number here states its own uncertainty. Informational only.</footer>
+<footer>Every number on this page comes with its own margin of error. This is information, not advice.</footer>
 </div>"""

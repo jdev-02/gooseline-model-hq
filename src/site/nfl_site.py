@@ -518,7 +518,7 @@ def game_card(r):
     else:
         tier = "pass"
         badge = '<span class="verdict v-none">PASS</span>'
-        body = ('<div class="how">Every price is fair. Nothing here is worth buying this week.</div>'
+        body = ('<div class="how">Every price here is fair, so there is nothing to buy this week.</div>'
                 if has_price else '<div class="how">No price on Kalshi yet.</div>')
     if abs(fav_p - 0.5) < 0.005:
         who = '<div class="who">Who we think wins: <b>too close to call</b></div>'
@@ -587,7 +587,7 @@ def start_here(rows):
     n = sum(len(_nfl_flags(r)) for r in rows)
     run = str(next((r.get("run_ts") for r in rows if r.get("run_ts")), "") or
               pd.Timestamp.utcnow().isoformat(timespec="seconds"))
-    why = (f' The model likes {n} side{"s" if n != 1 else ""} this week; every one is marked PASS '
+    why = (f' The model likes {n} side{"s" if n != 1 else ""}, and every one is marked PASS '
            f'on its card with the edge, because no football market here has beaten Kalshi in '
            f'testing.') if n else ""
     return (f'<div class="start" id="start-nfl" data-run="{run}" data-next="16:00,19:00">'
@@ -704,7 +704,7 @@ def build_site(out_path="site.html", games_path="data/nfl/games.csv",
         started_keys = {(r.gameday.date(), r.away_team, r.home_team)
                         for r in excluded_live.itertuples()}
         live = table["price_age_min"].notna().any() and (table["price_age_min"].fillna(1e9) <= 2).any()
-        price_age = ('<p class="sub">Market prices fetched live at build time.</p>' if live else "")
+        price_age = ('<p class="sub">Market prices were fetched live when this page was built.</p>' if live else "")
         for r in table.to_dict("records"):
             if (r["date"], r["away"], r["home"]) in started_keys:
                 continue
@@ -780,14 +780,15 @@ def build_site(out_path="site.html", games_path="data/nfl/games.csv",
 
 <div id="week" class="panel on">
 <h2>This Week</h2>
-<p class="sub">One word for now: <b>PASS</b>. The same three words as the MLB page
-(<b style="color:var(--green)">BET</b> one unit, <b style="color:var(--green)">SMALL BET</b>
-half a unit, <b>PASS</b> do nothing) are earned by a market's own record, and no football
-market has earned anything: picking a team to win lost 12% over five seasons in testing
-(871 bets), and the spread pick covered 49.2% against a 52.4% breakeven. When the model
-likes a side, the card still shows it with the edge, so you can see the disagreement;
-the word next to it says leave it. Tap <b>Details</b> on any card for the numbers.
-Check injuries and inactives before you buy anything: the model cannot see them.</p>
+<p class="sub">Football uses the same three words as the MLB page:
+<b style="color:var(--green)">BET</b> for one unit, <b style="color:var(--green)">SMALL BET</b>
+for half a unit, and <b>PASS</b> for nothing. A market earns its word from its own record,
+and no football market has earned one. Picking a team to win lost 12% over five seasons in
+testing (871 bets), and the spread pick covered 49.2% against a 52.4% breakeven, so every
+card this week reads <b>PASS</b>. When the model likes a side, the card still shows it with
+the edge, so you can see where the disagreement is. Tap <b>Details</b> on any card for the
+numbers. Check injuries and inactives before you buy anything, because the model cannot see
+them.</p>
 {week_note}{price_age}{(start_here(week_rows) + tier_buttons(week_rows, "nfl")) if week_rows else ""}<div class="grid">{cards}</div>
 </div>
 
@@ -862,7 +863,7 @@ confidence is honest.</p>
 <h2>Bayesian 101</h2>{B101}
 </div>
 
-<footer>Every number here states its own uncertainty. Informational only.</footer>
+<footer>Every number on this page comes with its own margin of error. This is information, not advice.</footer>
 </div></body></html>"""
     import os
     d = os.path.dirname(out_path)
