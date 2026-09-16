@@ -1,5 +1,5 @@
 {
-  "run_ts": "2026-09-16T00:06:32+00:00",
+  "run_ts": "2026-09-16T00:13:30+00:00",
   "slate_date": "2026-09-15",
   "ok": true,
   "hard_failures": [],
@@ -16,7 +16,7 @@
       "name": "schedule has today",
       "ok": true,
       "hard": true,
-      "detail": "15 games today, 5 still to play",
+      "detail": "15 games today, 3 still to play",
       "stage": "data"
     },
     {
@@ -51,7 +51,7 @@
       "name": "every upcoming game priced",
       "ok": true,
       "hard": true,
-      "detail": "5/5",
+      "detail": "3/3",
       "stage": "data"
     },
     {
@@ -114,7 +114,7 @@
       "name": "kalshi-snapshot alive",
       "ok": true,
       "hard": false,
-      "detail": "last snapshot 30 min ago",
+      "detail": "last snapshot 7 min ago",
       "stage": "data"
     },
     {
@@ -130,34 +130,6 @@
       "hard": true,
       "detail": "feature_cols in sync",
       "stage": "data"
-    },
-    {
-      "name": "site rebuilt this run",
-      "ok": true,
-      "hard": true,
-      "detail": "0 min old, 533 KB",
-      "stage": "site"
-    },
-    {
-      "name": "site dated today",
-      "ok": true,
-      "hard": true,
-      "detail": "looked for 'generated 2026-09-15'",
-      "stage": "site"
-    },
-    {
-      "name": "site shows every upcoming game",
-      "ok": true,
-      "hard": true,
-      "detail": "5/5 matchups found in docs/index.html",
-      "stage": "site"
-    },
-    {
-      "name": "site has a freshness strip",
-      "ok": true,
-      "hard": false,
-      "detail": "health strip rendered",
-      "stage": "site"
     }
   ]
 }
