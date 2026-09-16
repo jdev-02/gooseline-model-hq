@@ -410,6 +410,14 @@ def game_card(r):
         d.append(f'<div class="gap">Run line: model has {H} -1.5 covering {ph_c*100:.0f}%, '
                  f'{A} -1.5 covering {pa_c*100:.0f}%'
                  + (f' &middot; Kalshi: {", ".join(q)}' if q else " &middot; no Kalshi quote") + '</div>')
+    if _num(r.get("favno_price")):
+        favno_rec = labels.market_record("FAVNO")
+        favno_status = ("no bets settled yet" if not favno_rec else
+                        f"{favno_rec['roi']:+.1f}% over {favno_rec['n']} settled bets")
+        d.append(f'<div class="gap"><i>Research, not a market on this page yet: '
+                 f'{nick(r["favno_team"])} NO &minus;1.5 at {_cents(r["favno_price"])}, edge '
+                 f'{float(r["favno_edge"])*100:+.1f}% &mdash; a base-rate bet that an ordinary '
+                 f'favorite does not win by 2 or more, tracked separately ({favno_status}).</i></div>')
     mt = r.get("mu_total")
     if _num(mt):
         wx = (" &middot; roof closed" if r.get("roof_closed") in (True, 1, 1.0, "True")
@@ -506,18 +514,34 @@ def live_performance_html():
     if not p.exists() or not len(pd.read_csv(p)):
         return ""
     t = pd.read_csv(p).sort_values("date")
-    n, wins = len(t), int(t["won"].sum())
-    staked, pnl = t["stake"].sum(), t["pnl"].sum()
+    mk = t["market"].astype(str).str.upper()
+    # FAVNO is a structural, model-independent bet (see src/mlb/rundown.py)
+    # picked up from screenshots of David's own trading, not something the
+    # model flagged; it is tracked in the same file so labels.py's per-kind
+    # record logic works unchanged, but it is kept out of this headline --
+    # the headline's own copy is specifically about what the model flagged.
+    model_t = t[mk != "FAVNO"]
+    favno_t = t[mk == "FAVNO"]
+    n, wins = len(model_t), int(model_t["won"].sum())
+    staked, pnl = model_t["stake"].sum(), model_t["pnl"].sum()
     roi = 100 * pnl / staked if staked else 0.0
     # Moneyline and totals are different markets with different records;
     # one blended number hid that. Totals is the market worth watching.
-    mk = t["market"].astype(str).str.upper()
-    t["kind"] = np.select([mk == "ML", mk == "SPREAD"], ["Moneyline", "Spread"], "Totals")
+    mmk = model_t["market"].astype(str).str.upper()
+    model_t = model_t.copy()
+    model_t["kind"] = np.select([mmk == "ML", mmk == "SPREAD"], ["Moneyline", "Spread"], "Totals")
     by_kind = "".join(
         f'<tr><td>{k}</td><td>{len(g)}</td><td>{int(g.won.sum())}-{len(g)-int(g.won.sum())}</td>'
         f'<td>{"+" if g.pnl.sum() >= 0 else ""}${g.pnl.sum():.2f}</td>'
         f'<td>{(100*g.pnl.sum()/g.stake.sum() if g.stake.sum() else 0):+.1f}%</td></tr>'
-        for k, g in t.groupby("kind"))
+        for k, g in model_t.groupby("kind"))
+    if len(favno_t):
+        by_kind += (f'<tr><td>Favorite fade (research)</td><td>{len(favno_t)}</td>'
+                    f'<td>{int(favno_t.won.sum())}-{len(favno_t)-int(favno_t.won.sum())}</td>'
+                    f'<td>{"+" if favno_t.pnl.sum() >= 0 else ""}${favno_t.pnl.sum():.2f}</td>'
+                    f'<td>{(100*favno_t.pnl.sum()/favno_t.stake.sum() if favno_t.stake.sum() else 0):+.1f}%</td></tr>')
+    t = model_t
+    t["cum_pnl"] = t["pnl"].cumsum()   # recompute: the file's cum_pnl interleaves FAVNO rows
 
     rows = "".join(
         f'<tr><td>{x.date}</td><td>{x.market}</td><td>{x.pick}</td>'
@@ -542,6 +566,7 @@ until this has run for a full season.</p>
 <div class="mrow"><span class="mn">{roi:+.1f}%</span><span class="ml">ROI</span></div>
 </div>
 <table><tr><th>By market</th><th>Bets</th><th>Record</th><th>P&amp;L</th><th>ROI</th></tr>{by_kind}</table>
+{"<p class='sub'><i>Favorite fade is not a model signal: it bets that an ordinary favorite (50-70% to win) does not win by 2 or more runs, a base rate measured from 44,000+ games, independent of anything the model thinks. Tracked here because it is a real, testable claim; it is not on the game cards and does not affect any BET/SMALL BET/PASS word until it earns its own record the same way the other three did.</i></p>" if len(favno_t) else ""}
 <table><tr><th>Date</th><th>Market</th><th>Pick</th><th>Price</th><th>Edge</th>
 <th>Result</th><th>P&amp;L</th><th>Running total</th></tr>{rows}</table>
 """
@@ -780,10 +805,10 @@ def render(slate, today, health=None):
 <h2>Today's Slate</h2>
 <p class="sub">Every card shows three markets in the same order: <b>Moneyline</b> (who
 wins), <b>Run line</b> (wins by 2 or more, or loses by no more than 1), and <b>Total runs</b>
-(over or under a number). Next to each market is a word that tells you what to do.
-<b style="color:var(--green)">BET</b> means put down one unit; <b style="color:var(--green)">SMALL
-BET</b>, half a unit; <b>PASS</b> means leave it alone.</p>
-<p class="sub">The word comes from the market's own live record. BET needs at least
+(over or under a number). Next to each market is a word that tells you what to do: we
+recommend <b style="color:var(--green)">SMALL BET</b> as 0.5 units, <b style="color:var(--green)">BET</b>
+as 1.0 units, and <b>PASS</b> as no bet.</p>
+<p class="sub">Each market earns its word from its own live record: BET needs at least
 {labels.MIN_BETS} settled bets that are profitable overall and over the most recent half,
 and SMALL BET needs the same on at least {labels.SMALL_MIN}. When the model likes a side in
 a market that has not earned its word yet, that market's row on the card still shows the side
@@ -828,5 +853,6 @@ along with the thrill.</p>
 <div id="mrecord" class="panel">{live_performance_html()}<h2>Track Record</h2>{track_record_html()}</div>
 <div id="mb101" class="panel"><h2>Bayesian 101</h2>{B101.replace("{ML_RECORD}", ml_record())}</div>
 
-<footer>Every number on this page comes with its own margin of error. This is information, not advice.</footer>
+<footer>All numbers on this page carry a margin of error, shown for transparency. This site is
+not financial or gambling advice; it is a visualization of probabilities.</footer>
 </div>"""

@@ -125,6 +125,22 @@ for r in log.itertuples(index=False):
                              ask=float(sprice), p_model=p_model, edge=float(se), won=bool(won),
                              price_age_min=getattr(r, "price_age_min", np.nan)))
 
+    # ---- favno: base-rate fade of an ordinary favorite's run line ----
+    fe = getattr(r, "favno_edge", np.nan)
+    fcall = str(getattr(r, "favno_call", "") or "")
+    fprice = getattr(r, "favno_price", np.nan)
+    if (pd.notna(fe) and fe >= args.min_edge and fcall and not fcall.startswith("no edge")
+            and pd.notna(fprice)):
+        parts = fcall.split()      # "TEAM NO -1.5"
+        if len(parts) == 3:
+            team = parts[0]
+            tm = result if team == r.home else -result
+            won = tm <= 1          # the favorite did NOT win by 2+
+            p_model = float(getattr(r, "favno_p", np.nan))
+            rows.append(dict(date=r.date, game_pk=pk, market="FAVNO", pick=fcall,
+                             ask=float(fprice), p_model=p_model, edge=float(fe), won=bool(won),
+                             price_age_min=getattr(r, "price_age_min", np.nan)))
+
     # ---- total ----
     te = getattr(r, "total_edge", np.nan)
     call = str(getattr(r, "total_call", ""))

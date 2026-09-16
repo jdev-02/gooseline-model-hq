@@ -34,6 +34,46 @@ RUN_LINE = 1.5          # the standard MLB spread
 HIGH_VALUE_EDGE = 0.04  # same threshold David uses for NFL
 STALE_MINUTES = 15      # past this, a price is not actionable
 
+# FAVNO: a base-rate bet, not a model call. Across 44,456 played games
+# (2008-2026), a winning team wins by 2+ runs 71.5% of the time and by
+# exactly 1 run the other 28.5%. So for a team with true win probability p,
+# P(that team fails to cover -1.5) = 1 - WIN_BY_2_GIVEN_WIN * p, which is
+# above 50% for any p below ~70% -- meaning "No, the favorite doesn't cover"
+# is the statistically true favorite for every game short of a real
+# blowout price. Found 2026-09-15 from screenshots of a Kalshi account
+# buying No on ordinary favorites' run lines across a whole slate; verified
+# against src/mlb/compile games.csv rather than taken on faith. Tracked
+# here exactly like totals and spread were before they earned a card: the
+# rundown logs it and paper_trade.py settles it, and it appears on the
+# site only if its live record earns a word.
+WIN_BY_2_GIVEN_WIN = 0.715
+FAVNO_MIN_FAV = 0.50    # below this there is no favorite to fade
+FAVNO_MAX_FAV = 0.70    # at/above this the favorite covers more than it doesn't
+
+
+def _num(x):
+    return x is not None and not (isinstance(x, float) and np.isnan(x))
+
+
+def favno_pick(mkt_home, mkt_away, home_team, away_team, sp_home_bid, sp_away_bid):
+    """The base-rate fade of an ordinary favorite's run line (see
+    WIN_BY_2_GIVEN_WIN above): identify the favorite from the moneyline
+    ask, skip it if it is a toss-up or a real blowout price, and price the
+    No side off the run-line bid. Returns (team, no_price, p_no) or None.
+    A pure function so the base-rate arithmetic is unit-tested on its own,
+    without running the whole rundown pipeline."""
+    if not (_num(mkt_home) and _num(mkt_away)):
+        return None
+    if mkt_home >= mkt_away:
+        fav_p, fav_team, fav_bid = mkt_home, home_team, sp_home_bid
+    else:
+        fav_p, fav_team, fav_bid = mkt_away, away_team, sp_away_bid
+    if not (FAVNO_MIN_FAV <= fav_p < FAVNO_MAX_FAV) or not _num(fav_bid):
+        return None
+    no_price = round(1 - float(fav_bid), 3)
+    p_no = round(1 - WIN_BY_2_GIVEN_WIN * float(fav_p), 3)
+    return fav_team, no_price, p_no
+
 
 def verdict_for(edge, side, price_age_min=None):
     """Three-tier verdict, worded exactly as the NFL page.
@@ -346,6 +386,21 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
             rec["spread_p"] = round(float(best_s[3]), 3)
             rec["spread_call"] = (best_s[1] if best_s[0] > edge_threshold
                                   else f"no edge (best {best_s[1]})")
+        # FAVNO: a base-rate bet, not a model call. Silent (favno_call left
+        # unset) when there is no favorite in the 50-70% window or no
+        # run-line quote -- most games, by design, since a heavy favorite
+        # or a true toss-up gives this strategy nothing to say.
+        pick = favno_pick(rec["mkt_home"], rec["mkt_away"], r.home_team, r.away_team,
+                          rec.get("mkt_sp_home_bid"), rec.get("mkt_sp_away_bid"))
+        if pick:
+            fav_team, no_price, p_no = pick
+            e_no = p_no - no_price - kalshi_fee(no_price)
+            rec["favno_team"] = fav_team
+            rec["favno_price"] = no_price
+            rec["favno_p"] = p_no
+            rec["favno_edge"] = round(float(e_no), 3)
+            rec["favno_call"] = (f"{fav_team} NO -1.5" if e_no > edge_threshold
+                                 else f"no edge (best {fav_team} NO -1.5)")
         t = totals.get(r.game_pk)
         if t:
             rec["mu_total"] = t["mu_total"]

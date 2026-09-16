@@ -41,6 +41,7 @@ def _trades():
     t["kind"] = "TOTAL"
     t.loc[mk == "ML", "kind"] = "ML"
     t.loc[mk == "SPREAD", "kind"] = "SPREAD"
+    t.loc[mk == "FAVNO", "kind"] = "FAVNO"
     return t
 
 
