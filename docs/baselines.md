@@ -278,6 +278,24 @@ contract, costed at 1 − bid), log `spread_call` / `spread_edge` /
 record accrues under Live Bet Performance; the card word for the run line
 is decided by that record like the other two markets.
 
+### Totals ladder widened to 6.5–12.5 (2026-09-15)
+
+Until this date the rundown priced three rungs, 7.5 / 8.5 / 9.5, which is
+where Kalshi's main line sits on an ordinary night. Kalshi lists eleven
+rungs (5.5–15.5) and at Coors Field the main line is 10.5 or 11.5, so the
+model was pricing only the low tail there and flagging a long-shot Under
+8.5 while never looking at the rung being traded. `TOTAL_LINES` is now
+6.5–12.5 (the rungs listed on nearly every game; the outer tails stay out
+because the count model is least trusted there and they are listed on a
+minority of games). The pick is still the best fee-adjusted edge across
+the ladder, and the card now says how often the model expects the pick to
+win, what the price implies, and where the main line is when the pick sits
+elsewhere. **Record continuity:** the 79-bet live totals record was earned
+on the three-rung ladder; bets from here on can land on 6.5, 10.5, 11.5
+or 12.5. The backtest (`ops/backtest_mlb_totals_market.py`) still evaluates
+7.5–9.5 only; re-run it on the full ladder once the log has a month of
+wide-ladder rows.
+
 ### Team skill block: offensive K%, ISO, staff K% (`ops/experiment_skill_feats.py`, run 2026-09-15)
 
 A public analysis of World Series winners 2010–2025 (season z-scores, lasso

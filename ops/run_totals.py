@@ -31,7 +31,7 @@ from src.mlb.totals import (build_total_features, TOTAL_FEATURE_COLS, prob_over,
 FIG = Path("figures/mlb/totals")
 VAL_SEASON = 2022
 TEST_SEASONS = (2023, 2024, 2025)
-LINES = (7.5, 8.5, 9.5)
+LINES = (7.5, 8.5, 9.5)   # evaluation rungs; the rundown prices the wider ladder in src/mlb/rundown.TOTAL_LINES
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--first-season", type=int, default=2008)

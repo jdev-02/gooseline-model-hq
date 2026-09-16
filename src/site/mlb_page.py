@@ -132,6 +132,50 @@ def _market_price_and_wins(r, kind, what):
     return r.get(f"mkt_over_{ln:g}"), f"the two teams score <b>{int(ln) + 1} runs or more</b>"
 
 
+def _rungs(r):
+    """Every totals rung this row was priced at, from its own columns."""
+    out = []
+    for k in r.keys() if hasattr(r, "keys") else []:
+        if str(k).startswith("p_over_"):
+            try:
+                out.append(float(str(k)[7:]))
+            except ValueError:
+                pass
+    return sorted(out)
+
+
+def _main_line(r):
+    """The rung Kalshi is really trading: the one whose over price is
+    nearest 50 cents. A reader who opens the app sees this number first."""
+    best = None
+    for ln in _rungs(r):
+        mo = r.get(f"mkt_over_{ln:g}")
+        if _num(mo) and (best is None or abs(float(mo) - 0.5) < best[0]):
+            best = (abs(float(mo) - 0.5), ln)
+    return None if best is None else best[1]
+
+
+def _total_context(r, what):
+    """For a totals pick: how often our model says it wins, what the price
+    implies, and where the market's main line sits when the pick is on a
+    different rung. Keeps a long shot from reading like a favourite."""
+    direction, ln, _ = what.split()
+    ln = float(ln)
+    po = r.get(f"p_over_{ln:g}")
+    if not _num(po):
+        return ""
+    p = float(po) if direction == "Over" else 1 - float(po)
+    cost, _ = _market_price_and_wins(r, "TOTAL", what)
+    s = f'Our model says it wins <b>{p*100:.0f}%</b> of the time'
+    if _num(cost):
+        s += f'; the price implies {float(cost)*100:.0f}%'
+    ml_ = _main_line(r)
+    if ml_ is not None and ml_ != ln:
+        s += (f'. Kalshi&rsquo;s main line is <b>{ml_:g}</b>; this pick is on the {ln:g} rung '
+              f'because that is the price the model disagrees with')
+    return s + "."
+
+
 def _pretty(kind, what):
     if kind == "ML":
         return f"{nick(what.split(' to win')[0])} to win"
@@ -154,6 +198,8 @@ def _how(r, kind, tier, what, edge):
         return f'<div class="how pass">{s}</div>'
     s = (f'Buy <b>{_pretty(kind, what)}</b>{ptxt} on Kalshi, <b>{labels.UNIT[tier]}</b>. '
          f'Edge {edge*100:+.1f}% after fees.')
+    if kind == "TOTAL":
+        s += " " + _total_context(r, what)
     if tier == "small":
         s += (f' <span class="warn">Half a unit because {_KIND_VERB[kind].lower()} '
               f'{labels.record_phrase(kind)}: {labels.why_not_bet(kind)}.</span>')
@@ -186,7 +232,8 @@ def start_here(slate):
             f'<li data-kick="{kick}"><span class="verdict {_WORD[tier][1]} mini">{_WORD[tier][0]}</span> '
             f'<b>{_pretty(kind, what)}</b>{ptxt}, {labels.UNIT[tier]}: '
             f'{nick(r["away"])} at {nick(r["home"])}. Edge {edge*100:+.1f}%. '
-            f'<span class="closes" data-kick="{kick}"></span></li>')
+            + (_total_context(r, what) + " " if kind == "TOTAL" else "")
+            + f'<span class="closes" data-kick="{kick}"></span></li>')
     return (f'<div class="start" id="start-mlb" data-run="{run}"><b>Start here</b>: {len(items)} '
             f'bet{"s" if len(items) != 1 else ""} today, best first. A unit is whatever you '
             f'decided a unit is before you opened this page. A bet closes at first pitch.'
@@ -319,16 +366,18 @@ def game_card(r):
         wx = (" &middot; roof closed" if r.get("roof_closed") in (True, 1, 1.0, "True")
               else (f' &middot; {int(float(r["temp_f"]))}&deg;F at first pitch' if _num(r.get("temp_f")) else ""))
         ladder = []
-        for ln in (7.5, 8.5, 9.5):
+        for ln in _rungs(r):
             po = r.get(f"p_over_{ln:g}")
-            if not _num(po):
-                continue
+            mo = r.get(f"mkt_over_{ln:g}")
+            if not _num(po) or not _num(mo):
+                continue        # only rungs Kalshi actually lists
             po = float(po)
             lean, p = ("Over", po) if po >= 0.5 else ("Under", 1 - po)
-            mo = r.get(f"mkt_over_{ln:g}")
-            mtxt = f" (Kalshi {(float(mo) if lean == 'Over' else 1 - float(mo))*100:.0f}%)" if _num(mo) else ""
+            mtxt = f" (Kalshi {(float(mo) if lean == 'Over' else 1 - float(mo))*100:.0f}%)"
             ladder.append(f'{lean} {ln:g}: {p*100:.0f}%{mtxt}')
+        ml_ = _main_line(r)
         d.append(f'<div class="gap">Total runs: model expects <b>{float(mt):.1f}</b>{wx}'
+                 + (f' &middot; Kalshi&rsquo;s main line is {ml_:g}' if ml_ is not None else "")
                  + (f' &middot; {" &middot; ".join(ladder)}' if ladder else "") + '</div>')
         tf = flags.get("TOTAL")
         if tf:

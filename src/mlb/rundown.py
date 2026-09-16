@@ -54,7 +54,13 @@ def verdict_for(edge, side, price_age_min=None):
     return "NO VALUE at current price"
 
 
-TOTAL_LINES = (7.5, 8.5, 9.5)
+# Every rung Kalshi lists on a normal night. Until 2026-09-15 this was
+# (7.5, 8.5, 9.5), so at Coors Field, where the market's main line sits at
+# 10.5 or 11.5, the model priced only the low tail and flagged a long-shot
+# Under 8.5 while never looking at the rung everyone was trading. Rungs
+# below 6.5 and above 12.5 are listed on a minority of games and sit in the
+# tails where the count model is least trusted; they stay out.
+TOTAL_LINES = (6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5)
 
 
 def load_totals_config():
