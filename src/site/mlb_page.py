@@ -173,7 +173,47 @@ def _total_context(r, what):
     if ml_ is not None and ml_ != ln:
         s += (f'. Kalshi&rsquo;s main line is <b>{ml_:g}</b>; this pick is on the {ln:g} rung '
               f'because that is the price the model disagrees with')
-    return s + "."
+    s += "."
+    alt = _safer_ticket(r, direction, ln)
+    if alt:
+        a_ln, a_cost, a_p, a_edge = alt
+        s += (f' <b>Same opinion, safer ticket:</b> {direction} {a_ln:g} at {_cents(a_cost)} '
+              f'wins {a_p*100:.0f}% of the time by our model, edge {a_edge*100:+.1f}%; '
+              f'it pays less but hits more often.')
+    return s
+
+
+def _safer_ticket(r, direction, ln):
+    """The same over/under opinion on the rung nearest the market's main
+    line that still carries a positive edge after fees, if it is a
+    different rung from the pick. (rung, cost, p, edge) or None."""
+    from src.core.kalshi import kalshi_fee
+    ml_ = _main_line(r)
+    if ml_ is None:
+        return None
+    best = None
+    for rung in _rungs(r):
+        if rung == ln:
+            continue
+        po = r.get(f"p_over_{rung:g}")
+        if not _num(po):
+            continue
+        if direction == "Over":
+            cost, p = r.get(f"mkt_over_{rung:g}"), float(po)
+        else:
+            cost, p = r.get(f"mkt_under_{rung:g}"), 1 - float(po)
+            if not _num(cost) and _num(r.get(f"mkt_over_{rung:g}")):
+                cost = 1 - float(r[f"mkt_over_{rung:g}"])
+        if not _num(cost):
+            continue
+        cost = float(cost)
+        edge = p - cost - kalshi_fee(cost)
+        if edge <= 0.02 or p <= 0.45:
+            continue          # must still be a real edge and near a coin flip or better
+        key = abs(rung - ml_)
+        if best is None or key < best[0]:
+            best = (key, rung, cost, p, edge)
+    return None if best is None else best[1:]
 
 
 def _pretty(kind, what):
