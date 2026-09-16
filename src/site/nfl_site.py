@@ -590,8 +590,8 @@ def start_here(rows):
     why = (f' The model likes {n} side{"s" if n != 1 else ""} this week; every one is marked PASS '
            f'on its card with the edge, because no football market here has beaten Kalshi in '
            f'testing.') if n else ""
-    return (f'<div class="start" id="start-nfl" data-run="{run}"><b>Start here:</b> '
-            f'nothing to bet this week.{why}</div>')
+    return (f'<div class="start" id="start-nfl" data-run="{run}" data-next="16:00,19:00">'
+            f'<b>Start here:</b> nothing to bet this week.{why}</div>')
 
 
 def tier_buttons(rows, scope):

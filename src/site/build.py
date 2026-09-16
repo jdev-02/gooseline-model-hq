@@ -139,6 +139,27 @@ function localiseKickoffs(){
    yellow past 90 min. Nothing here fetches anything; between runs the
    numbers on the page are the numbers from the last run. */
 function fmtTime(d){ return d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}); }
+/* "52 min", "3h 10m", "1d 2h": the one number the reader wants. */
+function fmtSpan(ms){
+  var m = Math.max(0, Math.round(ms / 60000));
+  if (m < 90) return m + ' min';
+  var h = Math.floor(m / 60); m = m % 60;
+  if (h < 24) return h + 'h ' + m + 'm';
+  return Math.floor(h / 24) + 'd ' + (h % 24) + 'h';
+}
+/* Next scheduled run after now, from "HH:MM,HH:MM" UTC slots. */
+function nextRun(slots, now){
+  var best = null;
+  (slots || '').split(',').forEach(function(s){
+    var p = s.split(':'); if (p.length !== 2) return;
+    for (var d = 0; d < 2; d++){
+      var t = new Date(now); t.setUTCDate(t.getUTCDate() + d);
+      t.setUTCHours(+p[0], +p[1], 0, 0);
+      if (t.getTime() > now && (best === null || t.getTime() < best)) best = t.getTime();
+    }
+  });
+  return best;
+}
 function livePill(){
   var now = Date.now();
   document.querySelectorAll('.page').forEach(function(page){
@@ -154,21 +175,24 @@ function livePill(){
       };
       nav.appendChild(pill);
     }
-    var open = 0, next = null;
+    var open = 0, next = null, nextLi = null;
     box.querySelectorAll('li[data-kick]').forEach(function(li){
       var t = Date.parse(li.dataset.kick); var c = li.querySelector('.closes');
       if (isNaN(t)){ return; }
       if (t <= now){ li.classList.add('gone'); if (c) c.textContent = 'Started; too late.'; return; }
-      open++; if (next === null || t < next) next = t;
-      if (c){ var m = Math.round((t - now) / 60000);
-        c.textContent = 'Buy before ' + fmtTime(new Date(t)) + (m < 120 ? ' (' + m + ' min)' : '') + '.'; }
+      open++; if (next === null || t < next){ next = t; nextLi = li; }
+      if (c) c.textContent = fmtSpan(t - now) + ' left.';
     });
     var run = Date.parse(box.dataset.run || ''); var age = isNaN(run) ? null : Math.round((now - run) / 60000);
-    var agetxt = age === null ? '' : ' · prices ' + (age < 1 ? 'just now' : age < 90 ? age + ' min old' : Math.round(age/60) + ' h old');
-    var total = box.querySelectorAll('li[data-kick]').length;
-    pill.textContent = total ? (open + ' of ' + total + ' bet' + (total === 1 ? '' : 's') + ' open' + (next ? ' · buy before ' + fmtTime(new Date(next)) : '') + agetxt)
-                             : 'Nothing to bet' + agetxt;
-    pill.className = 'livepill' + (total && open ? '' : ' none') + (age !== null && age >= 90 ? ' old' : '');
+    if (open){
+      var more = open > 1 ? ' · +' + (open - 1) + ' more' : '';
+      pill.textContent = (nextLi.dataset.what || 'Next bet') + ' · ' + (nextLi.dataset.game || '') + ' · ' + fmtSpan(next - now) + ' left' + more;
+    } else {
+      var nr = nextRun(box.dataset.next, now);
+      pill.textContent = 'Nothing open' + (nr ? ' · next slate in ' + fmtSpan(nr - now) : '');
+    }
+    pill.className = 'livepill' + (open ? '' : ' none') + (open && age !== null && age >= 90 ? ' old' : '');
+    if (open && age !== null && age >= 90) pill.textContent += ' · prices ' + fmtSpan(age * 60000) + ' old';
   });
 }
 function siteReady(){ localiseKickoffs(); livePill(); setInterval(livePill, 30000); }

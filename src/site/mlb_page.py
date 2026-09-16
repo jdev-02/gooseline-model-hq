@@ -206,6 +206,11 @@ def _how(r, kind, tier, what, edge):
     return f'<div class="how">{s}</div>'
 
 
+# The daily cron slots (.github/workflows/mlb-daily.yml), for the pill's
+# "next slate in ..." countdown once every bet has started.
+NEXT_RUNS_UTC = "15:00,16:30,20:00"
+
+
 def start_here(slate):
     """The ranked list at the top of the slate: every BET and SMALL BET,
     best first, each one an instruction. Empty means sit the day out, and
@@ -221,20 +226,23 @@ def start_here(slate):
         why = (f' The model likes {n} side{"s" if n != 1 else ""} today, all in markets '
                f'that have lost money in live betting; they are marked PASS on the cards '
                f'so you can see them, and the record says not to buy them.') if n else ""
-        return (f'<div class="start" id="start-mlb" data-run="{run}"><b>Start here:</b> '
-                f'nothing to bet today.{why}</div>')
+        return (f'<div class="start" id="start-mlb" data-run="{run}" data-next="{NEXT_RUNS_UTC}">'
+                f'<b>Start here:</b> nothing to bet today.{why}</div>')
     items = []
     for i, (r, (kind, tier, what, edge)) in enumerate(ranked, 1):
         cost, wins = _market_price_and_wins(r, kind, what)
         ptxt = f" at {_cents(cost)}" if _num(cost) else ""
         kick = str(r.get("kick_iso") or "")
         items.append(
-            f'<li data-kick="{kick}"><span class="verdict {_WORD[tier][1]} mini">{_WORD[tier][0]}</span> '
+            f'<li data-kick="{kick}" data-what="{_pretty(kind, what)}" '
+            f'data-game="{nick(r["away"])} at {nick(r["home"])}">'
+            f'<span class="verdict {_WORD[tier][1]} mini">{_WORD[tier][0]}</span> '
             f'<b>{_pretty(kind, what)}</b>{ptxt}, {labels.UNIT[tier]}: '
             f'{nick(r["away"])} at {nick(r["home"])}. Edge {edge*100:+.1f}%. '
             + (_total_context(r, what) + " " if kind == "TOTAL" else "")
             + f'<span class="closes" data-kick="{kick}"></span></li>')
-    return (f'<div class="start" id="start-mlb" data-run="{run}"><b>Start here</b>: {len(items)} '
+    return (f'<div class="start" id="start-mlb" data-run="{run}" data-next="{NEXT_RUNS_UTC}">'
+            f'<b>Start here</b>: {len(items)} '
             f'bet{"s" if len(items) != 1 else ""} today, best first. A unit is whatever you '
             f'decided a unit is before you opened this page. Each one has to be bought before first pitch.'
             f'<ol>{"".join(items)}</ol></div>')
