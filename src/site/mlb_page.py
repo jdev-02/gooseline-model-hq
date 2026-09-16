@@ -786,8 +786,8 @@ BET</b>, half a unit; <b>PASS</b> means leave it alone.</p>
 <p class="sub">The word comes from the market's own live record. BET needs at least
 {labels.MIN_BETS} settled bets that are profitable overall and over the most recent half,
 and SMALL BET needs the same on at least {labels.SMALL_MIN}. When the model likes a side in
-a market that has not earned its word yet, the line still shows the side and the edge under
-PASS, so you can see the disagreement without being told to buy it.</p>
+a market that has not earned its word yet, that market's row on the card still shows the side
+and the edge under PASS, so you can see the disagreement without being told to buy it.</p>
 <p class="sub">Records so far: picking a team to win {labels.record_phrase("ML")}; the run
 line {labels.record_phrase("SPREAD")}; total runs {labels.record_phrase("TOTAL")}. Tap
 <b>Details</b> on any card for the numbers, and check the lineup before you buy.</p>
