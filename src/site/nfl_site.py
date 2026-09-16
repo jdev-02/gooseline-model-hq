@@ -780,15 +780,15 @@ def build_site(out_path="site.html", games_path="data/nfl/games.csv",
 
 <div id="week" class="panel on">
 <h2>This Week</h2>
-<p class="sub">Football uses the same three words as the MLB page:
-<b style="color:var(--green)">BET</b> for one unit, <b style="color:var(--green)">SMALL BET</b>
-for half a unit, and <b>PASS</b> for nothing. A market earns its word from its own record,
-and no football market has earned one. Picking a team to win lost 12% over five seasons in
-testing (871 bets), and the spread pick covered 49.2% against a 52.4% breakeven, so every
-card this week reads <b>PASS</b>. When the model likes a side, the card still shows it with
-the edge, so you can see where the disagreement is. Tap <b>Details</b> on any card for the
-numbers. Check injuries and inactives before you buy anything, because the model cannot see
-them.</p>
+<p class="sub">Football uses the same three words as the MLB page: we recommend
+<b style="color:var(--green)">SMALL BET</b> as 0.5 units, <b style="color:var(--green)">BET</b>
+as 1.0 units, and <b>PASS</b> as no bet. A betting market earns its word from its performance
+against Kalshi's own prices, and no football market has earned one. Picking a team to win lost
+12% over five seasons in testing (871 bets), and the spread pick covered 49.2% against a 52.4%
+breakeven, so every card this week reads <b>PASS</b>. When the model likes a side, the card
+still shows it with the edge, so you can see where the disagreement is. Tap <b>Details</b> on
+any card for the numbers. Check injuries and inactives before you buy anything, because the
+model cannot see them.</p>
 {week_note}{price_age}{(start_here(week_rows) + tier_buttons(week_rows, "nfl")) if week_rows else ""}<div class="grid">{cards}</div>
 </div>
 
@@ -863,7 +863,8 @@ confidence is honest.</p>
 <h2>Bayesian 101</h2>{B101}
 </div>
 
-<footer>Every number on this page comes with its own margin of error. This is information, not advice.</footer>
+<footer>All numbers on this page carry a margin of error, shown for transparency. This site is
+not financial or gambling advice; it is a visualization of probabilities.</footer>
 </div></body></html>"""
     import os
     d = os.path.dirname(out_path)
