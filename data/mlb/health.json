@@ -1,5 +1,5 @@
 {
-  "run_ts": "2026-09-17T22:31:04+00:00",
+  "run_ts": "2026-09-17T22:33:32+00:00",
   "slate_date": "2026-09-17",
   "ok": true,
   "hard_failures": [],
@@ -130,6 +130,34 @@
       "hard": true,
       "detail": "feature_cols in sync",
       "stage": "data"
+    },
+    {
+      "name": "site rebuilt this run",
+      "ok": true,
+      "hard": true,
+      "detail": "0 min old, 536 KB",
+      "stage": "site"
+    },
+    {
+      "name": "site dated today",
+      "ok": true,
+      "hard": true,
+      "detail": "looked for 'generated 2026-09-17'",
+      "stage": "site"
+    },
+    {
+      "name": "site shows every upcoming game",
+      "ok": true,
+      "hard": true,
+      "detail": "5/5 matchups found in docs/index.html",
+      "stage": "site"
+    },
+    {
+      "name": "site has a freshness strip",
+      "ok": true,
+      "hard": false,
+      "detail": "health strip rendered",
+      "stage": "site"
     }
   ]
 }
