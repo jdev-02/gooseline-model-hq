@@ -1,22 +1,22 @@
-MLB, 256 priced+settled games, 2026-08-27 -> 2026-09-16
+MLB, 258 priced+settled games, 2026-08-27 -> 2026-09-17
 
 Brier (lower is better):
   Kalshi alone (a=0):   0.2379
-  model alone  (a=1):   0.2424
+  model alone  (a=1):   0.2423
   coin flip:            0.2500
 
 Blend a*model + (1-a)*Kalshi:
   a=0.00  brier=0.2379
   a=0.25  brier=0.2385
-  a=0.50  brier=0.2394
-  a=0.75  brier=0.2407
-  a=1.00  brier=0.2424
+  a=0.50  brier=0.2393
+  a=0.75  brier=0.2406
+  a=1.00  brier=0.2423
   best a = 0.00
 
-Honest split: choose a on first half (131 games) -> a*=0.00; test on second half (125 games): Kalshi 0.2336 vs blend 0.2336 -> Kalshi better
+Honest split: choose a on first half (131 games) -> a*=0.00; test on second half (127 games): Kalshi 0.2337 vs blend 0.2337 -> Kalshi better
 
 Paper trade vs live Kalshi ask, after 7% fee, $15 flat:
-  edge >= 0%                 bets  183  win  42.1%  P&L  -212.35  ROI   -7.7%
+  edge >= 0%                 bets  184  win  42.4%  P&L  -203.78  ROI   -7.4%
   edge >= 2%                 bets  131  win  40.5%  P&L  -169.19  ROI   -8.6%
   edge >= 4%                 bets   71  win  39.4%  P&L   -92.99  ROI   -8.7%
   edge >= 6%                 bets   39  win  35.9%  P&L   -82.30  ROI  -14.1%
@@ -26,10 +26,10 @@ Paper trade vs live Kalshi ask, after 7% fee, $15 flat:
 
 Calibration by KALSHI probability bucket:
   Kalshi (0.0, 0.35]   n=  8  home won  37.5%   Kalshi said  33.3%   model said  37.2%
-  Kalshi (0.35, 0.45]  n= 42  home won  42.9%   Kalshi said  40.5%   model said  42.3%
+  Kalshi (0.35, 0.45]  n= 44  home won  43.2%   Kalshi said  40.6%   model said  42.2%
   Kalshi (0.45, 0.55]  n= 97  home won  48.5%   Kalshi said  50.6%   model said  48.6%
   Kalshi (0.55, 0.65]  n= 86  home won  59.3%   Kalshi said  59.8%   model said  54.8%
   Kalshi (0.65, 1.0]   n= 23  home won  73.9%   Kalshi said  68.5%   model said  61.9%
 
-TOTALS (over 8.5), 175 games:
-  Brier Kalshi 0.2455   model 0.2462   best blend a=0.35
+TOTALS (over 8.5), 177 games:
+  Brier Kalshi 0.2447   model 0.2461   best blend a=0.20
