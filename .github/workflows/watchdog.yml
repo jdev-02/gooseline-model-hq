@@ -5,10 +5,21 @@ name: watchdog
 # run history and the committed health.json whether today's runs happened
 # and passed, re-dispatches anything missing or failed, and keeps exactly
 # one issue open until everything is green again.
+#
+# 2026-09-18: both of that day's morning mlb-daily slots (15:00 and 16:30
+# UTC) silently didn't fire -- zero trace in run history, not a delay, a
+# drop -- and the old spread-out checks (13:30/17:30/22:00 ET) didn't
+# notice until 06:59 UTC the next day. Jon was looking at a >12-hour-stale
+# site in the gap. Checks now sit ~20 min after every mlb-daily/nfl-daily
+# slot instead of on an independent schedule, so a dropped run is caught
+# within ~20 minutes, not hours.
 on:
   schedule:
-    - cron: "30 17 * * *"    # 13:30 ET, after the second mlb-daily slot
-    - cron: "30 21 * * *"    # 17:30 ET, before the first pitches
+    - cron: "20 15 * * *"    # 11:20 ET, ~20 min after mlb-daily's 11:00 slot
+    - cron: "20 16 * * *"    # 12:20 ET, ~20 min after nfl-daily's 12:00 slot
+    - cron: "50 16 * * *"    # 12:50 ET, ~20 min after mlb-daily's 12:30 slot
+    - cron: "20 19 * * *"    # 15:20 ET, ~20 min after nfl-daily's 15:00 slot
+    - cron: "20 20 * * *"    # 16:20 ET, ~20 min after mlb-daily's 16:00 slot
     - cron: "0 2 * * *"      # 22:00 ET, catches a missed evening snapshot
   workflow_dispatch:
 
