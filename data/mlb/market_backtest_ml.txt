@@ -1,22 +1,22 @@
-MLB, 280 priced+settled games, 2026-08-27 -> 2026-09-18
+MLB, 281 priced+settled games, 2026-08-27 -> 2026-09-19
 
 Brier (lower is better):
-  Kalshi alone (a=0):   0.2355
+  Kalshi alone (a=0):   0.2354
   model alone  (a=1):   0.2403
   coin flip:            0.2500
 
 Blend a*model + (1-a)*Kalshi:
-  a=0.00  brier=0.2355
-  a=0.25  brier=0.2361
+  a=0.00  brier=0.2354
+  a=0.25  brier=0.2360
   a=0.50  brier=0.2371
   a=0.75  brier=0.2385
   a=1.00  brier=0.2403
   best a = 0.00
 
-Honest split: choose a on first half (136 games) -> a*=0.00; test on second half (144 games): Kalshi 0.2299 vs blend 0.2299 -> Kalshi better
+Honest split: choose a on first half (136 games) -> a*=0.00; test on second half (145 games): Kalshi 0.2298 vs blend 0.2298 -> Kalshi better
 
 Paper trade vs live Kalshi ask, after 7% fee, $15 flat:
-  edge >= 0%                 bets  201  win  42.3%  P&L  -255.99  ROI   -8.5%
+  edge >= 0%                 bets  202  win  42.1%  P&L  -270.99  ROI   -8.9%
   edge >= 2%                 bets  143  win  41.3%  P&L  -171.11  ROI   -8.0%
   edge >= 4%                 bets   79  win  38.0%  P&L  -152.58  ROI  -12.9%
   edge >= 6%                 bets   41  win  34.1%  P&L  -112.30  ROI  -18.3%
@@ -27,9 +27,9 @@ Paper trade vs live Kalshi ask, after 7% fee, $15 flat:
 Calibration by KALSHI probability bucket:
   Kalshi (0.0, 0.35]   n=  9  home won  33.3%   Kalshi said  33.5%   model said  37.2%
   Kalshi (0.35, 0.45]  n= 48  home won  43.8%   Kalshi said  40.6%   model said  41.9%
-  Kalshi (0.45, 0.55]  n=107  home won  46.7%   Kalshi said  50.6%   model said  48.4%
+  Kalshi (0.45, 0.55]  n=108  home won  47.2%   Kalshi said  50.7%   model said  48.5%
   Kalshi (0.55, 0.65]  n= 89  home won  59.6%   Kalshi said  59.7%   model said  54.7%
   Kalshi (0.65, 1.0]   n= 27  home won  77.8%   Kalshi said  68.6%   model said  61.9%
 
-TOTALS (over 8.5), 199 games:
-  Brier Kalshi 0.2444   model 0.2448   best blend a=0.45
+TOTALS (over 8.5), 200 games:
+  Brier Kalshi 0.2442   model 0.2446   best blend a=0.40
