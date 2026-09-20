@@ -1,5 +1,5 @@
 {
-  "run_ts": "2026-09-20T18:33:38+00:00",
+  "run_ts": "2026-09-20T21:06:31+00:00",
   "run_date": "2026-09-20",
   "ok": false,
   "hard_failures": [
@@ -7,6 +7,34 @@
   ],
   "warnings": [],
   "checks": [
+    {
+      "name": "site rebuilt this run",
+      "ok": true,
+      "hard": true,
+      "detail": "0 min old, 551 KB",
+      "stage": "site"
+    },
+    {
+      "name": "no already-started game shown as upcoming on the site",
+      "ok": false,
+      "hard": true,
+      "detail": "CAR@ATL; MIN@CHI; PIT@NE",
+      "stage": "site"
+    },
+    {
+      "name": "near-term upcoming games appear on the site",
+      "ok": true,
+      "hard": false,
+      "detail": "clean",
+      "stage": "site"
+    },
+    {
+      "name": "site has a freshness strip",
+      "ok": true,
+      "hard": false,
+      "detail": "health strip rendered",
+      "stage": "site"
+    },
     {
       "name": "games.csv refreshed",
       "ok": true,
@@ -60,36 +88,8 @@
       "name": "kalshi-snapshot alive (NFL series)",
       "ok": true,
       "hard": false,
-      "detail": "last snapshot 70 min ago",
+      "detail": "last snapshot 86 min ago",
       "stage": "data"
-    },
-    {
-      "name": "site rebuilt this run",
-      "ok": true,
-      "hard": true,
-      "detail": "0 min old, 551 KB",
-      "stage": "site"
-    },
-    {
-      "name": "no already-started game shown as upcoming on the site",
-      "ok": false,
-      "hard": true,
-      "detail": "CAR@ATL; MIN@CHI; PIT@NE",
-      "stage": "site"
-    },
-    {
-      "name": "near-term upcoming games appear on the site",
-      "ok": true,
-      "hard": false,
-      "detail": "clean",
-      "stage": "site"
-    },
-    {
-      "name": "site has a freshness strip",
-      "ok": true,
-      "hard": false,
-      "detail": "health strip rendered",
-      "stage": "site"
     }
   ]
 }
