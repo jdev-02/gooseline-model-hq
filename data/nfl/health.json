@@ -1,10 +1,40 @@
 {
-  "run_ts": "2026-09-21T20:19:53+00:00",
+  "run_ts": "2026-09-21T22:20:50+00:00",
   "run_date": "2026-09-21",
   "ok": true,
   "hard_failures": [],
-  "warnings": [],
+  "warnings": [
+    "kalshi-snapshot alive (NFL series)"
+  ],
   "checks": [
+    {
+      "name": "site rebuilt this run",
+      "ok": true,
+      "hard": true,
+      "detail": "0 min old, 532 KB",
+      "stage": "site"
+    },
+    {
+      "name": "no already-started game shown as upcoming on the site",
+      "ok": true,
+      "hard": true,
+      "detail": "clean",
+      "stage": "site"
+    },
+    {
+      "name": "near-term upcoming games appear on the site",
+      "ok": true,
+      "hard": false,
+      "detail": "clean",
+      "stage": "site"
+    },
+    {
+      "name": "site has a freshness strip",
+      "ok": true,
+      "hard": false,
+      "detail": "health strip rendered",
+      "stage": "site"
+    },
     {
       "name": "games.csv refreshed",
       "ok": true,
@@ -56,38 +86,10 @@
     },
     {
       "name": "kalshi-snapshot alive (NFL series)",
-      "ok": true,
+      "ok": false,
       "hard": false,
-      "detail": "last snapshot 67 min ago",
+      "detail": "last snapshot 190 min ago",
       "stage": "data"
-    },
-    {
-      "name": "site rebuilt this run",
-      "ok": true,
-      "hard": true,
-      "detail": "0 min old, 532 KB",
-      "stage": "site"
-    },
-    {
-      "name": "no already-started game shown as upcoming on the site",
-      "ok": true,
-      "hard": true,
-      "detail": "clean",
-      "stage": "site"
-    },
-    {
-      "name": "near-term upcoming games appear on the site",
-      "ok": true,
-      "hard": false,
-      "detail": "clean",
-      "stage": "site"
-    },
-    {
-      "name": "site has a freshness strip",
-      "ok": true,
-      "hard": false,
-      "detail": "health strip rendered",
-      "stage": "site"
     }
   ]
 }
