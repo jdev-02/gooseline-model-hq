@@ -1,11 +1,11 @@
 {
-  "run_ts": "2026-09-22T07:18:51+00:00",
+  "run_ts": "2026-09-22T18:35:41+00:00",
   "slate_date": "2026-09-22",
-  "ok": true,
-  "hard_failures": [],
-  "warnings": [
-    "kalshi-snapshot alive"
+  "ok": false,
+  "hard_failures": [
+    "games.csv complete for today"
   ],
+  "warnings": [],
   "checks": [
     {
       "name": "schedule refreshed",
@@ -18,14 +18,14 @@
       "name": "schedule has today",
       "ok": true,
       "hard": true,
-      "detail": "16 games today, 16 still to play",
+      "detail": "16 games today, 14 still to play",
       "stage": "data"
     },
     {
       "name": "games.csv complete for today",
-      "ok": true,
+      "ok": false,
       "hard": true,
-      "detail": "16/16 present",
+      "detail": "15/16 present, missing gamePk [824785]",
       "stage": "data"
     },
     {
@@ -53,7 +53,7 @@
       "name": "every upcoming game priced",
       "ok": true,
       "hard": true,
-      "detail": "16/16",
+      "detail": "14/14",
       "stage": "data"
     },
     {
@@ -109,14 +109,14 @@
       "name": "probable pitchers known",
       "ok": true,
       "hard": false,
-      "detail": "14/16 games have both starters",
+      "detail": "15/16 games have both starters",
       "stage": "data"
     },
     {
       "name": "kalshi-snapshot alive",
-      "ok": false,
+      "ok": true,
       "hard": false,
-      "detail": "last snapshot 243 min ago",
+      "detail": "last snapshot 35 min ago",
       "stage": "data"
     },
     {
@@ -132,34 +132,6 @@
       "hard": true,
       "detail": "feature_cols in sync",
       "stage": "data"
-    },
-    {
-      "name": "site rebuilt this run",
-      "ok": true,
-      "hard": true,
-      "detail": "0 min old, 567 KB",
-      "stage": "site"
-    },
-    {
-      "name": "site dated today",
-      "ok": true,
-      "hard": true,
-      "detail": "looked for 'generated 2026-09-22'",
-      "stage": "site"
-    },
-    {
-      "name": "site shows every upcoming game",
-      "ok": true,
-      "hard": true,
-      "detail": "16/16 matchups found in docs/index.html",
-      "stage": "site"
-    },
-    {
-      "name": "site has a freshness strip",
-      "ok": true,
-      "hard": false,
-      "detail": "health strip rendered",
-      "stage": "site"
     }
   ]
 }
