@@ -27,6 +27,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.mlb.totals import TOTAL_FEATURE_COLS  # noqa: E402
 from src.mlb.features import MLB_FEATURE_COLS  # noqa: E402
+from src.mlb.compile import DEAD_STATUSES  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data" / "mlb"
@@ -88,8 +89,16 @@ def _todays_schedule(today):
         if d["date"] != str(today):
             continue
         for g in d["games"]:
+            status = g["status"].get("detailedState")
+            if status in DEAD_STATUSES:
+                # A rained-out game keeps its old gamePk under this date's
+                # bucket too, alongside a second entry for its makeup date.
+                # compile_games drops these; counting it here as "today's
+                # games" produced a false "games.csv complete" failure for
+                # a game that had already moved to the next day (2026-09-22).
+                continue
             hid, aid = g["teams"]["home"]["team"]["id"], g["teams"]["away"]["team"]["id"]
-            rows.append({"game_pk": g["gamePk"], "status": g["status"].get("detailedState"),
+            rows.append({"game_pk": g["gamePk"], "status": status,
                          "home": g["teams"]["home"]["team"].get("abbreviation") or abbr.get(hid, hid),
                          "away": g["teams"]["away"]["team"].get("abbreviation") or abbr.get(aid, aid)})
     return pd.DataFrame(rows), p

@@ -38,6 +38,15 @@ def _linescore_side(ls, side):
     }
 
 
+# A rained-out game keeps its gamePk under its *original* date's bucket in
+# the bulk season schedule pull, with one of these statuses, alongside a
+# second entry for its makeup date. Anything reading that schedule for
+# "today's games" must drop these the same way compile_games does, or it
+# will count a game that already moved to another day. Shared so the two
+# can't drift apart (see ops/healthcheck.py's _todays_schedule).
+DEAD_STATUSES = ["Postponed", "Cancelled", "Suspended"]
+
+
 def compile_games(seasons, cache_dir=RAW, teams=None):
     rows = []
     for season in seasons:
@@ -113,7 +122,7 @@ def compile_games(seasons, cache_dir=RAW, teams=None):
             df[f"{side}_team"] = df[f"{side}_team_id"].map(tmap["abbrev"])
             df[f"{side}_div_id"] = df[f"{side}_team_id"].map(tmap["division_id"])
     df = df[df["abstract_state"].isin(["Final", "Preview", "Live"])]
-    df = df[~df["status"].isin(["Postponed", "Cancelled", "Suspended"])]
+    df = df[~df["status"].isin(DEAD_STATUSES)]
     df = df.dropna(subset=["home_team", "away_team"])
     df["gameday"] = pd.to_datetime(df["gameday"])
     df["result"] = np.where(df["played"], df["home_score"] - df["away_score"], np.nan)
