@@ -5,8 +5,9 @@ name: kalshi-snapshot
 # continuous price history to pull.
 on:
   schedule:
-    - cron: "*/30 14-23 * * *"   # 10:00-19:30 ET (EDT = UTC-4)
-    - cron: "*/30 0-3 * * *"     # 20:00-23:30 ET
+    # :07/:37 rather than :00/:30 -- see mlb-daily.yml on why.
+    - cron: "7,37 14-23 * * *"   # 10:07/10:37-19:07/19:37 ET (EDT = UTC-4)
+    - cron: "7,37 0-3 * * *"     # 20:07/20:37-23:07/23:37 ET
   workflow_dispatch:
 
 permissions:

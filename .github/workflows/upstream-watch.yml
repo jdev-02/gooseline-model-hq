@@ -10,7 +10,7 @@ name: upstream-watch
 # walk-forward gate before they ship here.
 on:
   schedule:
-    - cron: "0 13 * * 1"   # Mondays 09:00 ET
+    - cron: "17 13 * * 1"  # Mondays 09:17 ET; off the hour, see mlb-daily.yml
   workflow_dispatch:
 
 permissions:

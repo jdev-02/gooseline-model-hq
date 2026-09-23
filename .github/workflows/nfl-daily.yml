@@ -5,8 +5,8 @@ name: nfl-daily
 # Runs through the season; harmless in the offseason (no games in the horizon).
 on:
   schedule:
-    - cron: "0 16 * * *"        # 12:00 ET
-    - cron: "0 19 * * *"        # 15:00 ET, second slot; GitHub's schedule is best-effort
+    - cron: "9 16 * * *"        # 12:09 ET; off the hour, see mlb-daily.yml
+    - cron: "9 19 * * *"        # 15:09 ET, second slot; GitHub's schedule is best-effort
   workflow_dispatch:
 
 permissions:

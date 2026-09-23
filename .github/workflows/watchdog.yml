@@ -15,12 +15,15 @@ name: watchdog
 # within ~20 minutes, not hours.
 on:
   schedule:
-    - cron: "20 15 * * *"    # 11:20 ET, ~20 min after mlb-daily's 11:00 slot
-    - cron: "20 16 * * *"    # 12:20 ET, ~20 min after nfl-daily's 12:00 slot
-    - cron: "50 16 * * *"    # 12:50 ET, ~20 min after mlb-daily's 12:30 slot
-    - cron: "20 19 * * *"    # 15:20 ET, ~20 min after nfl-daily's 15:00 slot
-    - cron: "20 20 * * *"    # 16:20 ET, ~20 min after mlb-daily's 16:00 slot
-    - cron: "0 2 * * *"      # 22:00 ET, catches a missed evening snapshot
+    # Also off the hour/half-hour -- see mlb-daily.yml. Times track that
+    # file's and nfl-daily.yml's actual slots (11:07/12:37/16:07 ET and
+    # 12:09/15:09 ET), ~20 min after each.
+    - cron: "27 15 * * *"    # 11:27 ET, ~20 min after mlb-daily's 11:07 slot
+    - cron: "29 16 * * *"    # 12:29 ET, ~20 min after nfl-daily's 12:09 slot
+    - cron: "57 16 * * *"    # 12:57 ET, ~20 min after mlb-daily's 12:37 slot
+    - cron: "29 19 * * *"    # 15:29 ET, ~20 min after nfl-daily's 15:09 slot
+    - cron: "27 20 * * *"    # 16:27 ET, ~20 min after mlb-daily's 16:07 slot
+    - cron: "11 2 * * *"     # 22:11 ET, catches a missed evening snapshot
   workflow_dispatch:
 
 permissions:

@@ -8,9 +8,15 @@ name: mlb-daily
 # game), and the later slots see posted probables and fresher prices.
 on:
   schedule:
-    - cron: "0 15 * * *"         # 11:00 ET (EDT)
-    - cron: "30 16 * * *"        # 12:30 ET
-    - cron: "0 20 * * *"         # 16:00 ET, before the early first pitches
+    # Off the hour/half-hour on purpose: GitHub's own docs say scheduled
+    # workflows are most likely to be delayed or dropped "during periods of
+    # high loads," and high load times include the top of every hour --
+    # because nearly everyone schedules on :00/:30. 2026-09-23: this repo's
+    # two on-the-hour slots (11:00 and 16:00 ET) both silently didn't fire
+    # the same morning. Odd minutes are cheap insurance, not a full fix.
+    - cron: "7 15 * * *"         # 11:07 ET (EDT)
+    - cron: "37 16 * * *"        # 12:37 ET
+    - cron: "7 20 * * *"         # 16:07 ET, before the early first pitches
   workflow_dispatch:
 
 permissions:
