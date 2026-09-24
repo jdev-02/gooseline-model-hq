@@ -1,9 +1,11 @@
 {
-  "run_ts": "2026-09-23T19:51:53+00:00",
-  "slate_date": "2026-09-23",
+  "run_ts": "2026-09-24T07:37:07+00:00",
+  "slate_date": "2026-09-24",
   "ok": true,
   "hard_failures": [],
-  "warnings": [],
+  "warnings": [
+    "kalshi-snapshot alive"
+  ],
   "checks": [
     {
       "name": "schedule refreshed",
@@ -16,21 +18,21 @@
       "name": "schedule has today",
       "ok": true,
       "hard": true,
-      "detail": "16 games today, 13 still to play",
+      "detail": "12 games today, 12 still to play",
       "stage": "data"
     },
     {
       "name": "games.csv complete for today",
       "ok": true,
       "hard": true,
-      "detail": "16/16 present",
+      "detail": "12/12 present",
       "stage": "data"
     },
     {
       "name": "yesterday settled in games.csv",
       "ok": true,
       "hard": true,
-      "detail": "15/15 finals carry scores",
+      "detail": "16/16 finals carry scores",
       "stage": "data"
     },
     {
@@ -51,70 +53,70 @@
       "name": "every upcoming game priced",
       "ok": true,
       "hard": true,
-      "detail": "13/13",
+      "detail": "12/12",
       "stage": "data"
     },
     {
       "name": "moneyline probabilities finite",
       "ok": true,
       "hard": true,
-      "detail": "16/16",
+      "detail": "12/12",
       "stage": "data"
     },
     {
       "name": "totals priced",
       "ok": true,
       "hard": true,
-      "detail": "16/16",
+      "detail": "12/12",
       "stage": "data"
     },
     {
       "name": "totals have a market price",
       "ok": true,
       "hard": false,
-      "detail": "15/16 games have an O/U 8.5 quote",
+      "detail": "12/12 games have an O/U 8.5 quote",
       "stage": "data"
     },
     {
       "name": "run line has a market price",
       "ok": true,
       "hard": false,
-      "detail": "15/16 games have a -1.5 quote",
+      "detail": "12/12 games have a -1.5 quote",
       "stage": "data"
     },
     {
       "name": "weather at every open-roof game",
       "ok": true,
       "hard": true,
-      "detail": "16/16 have a temperature or a closed roof",
+      "detail": "12/12 have a temperature or a closed roof",
       "stage": "data"
     },
     {
       "name": "Kalshi prices present",
       "ok": true,
       "hard": false,
-      "detail": "15/16 games have a moneyline price",
+      "detail": "12/12 games have a moneyline price",
       "stage": "data"
     },
     {
       "name": "Kalshi prices fresh",
       "ok": true,
       "hard": false,
-      "detail": "15/15 priced games under 20 min",
+      "detail": "12/12 priced games under 20 min",
       "stage": "data"
     },
     {
       "name": "probable pitchers known",
       "ok": true,
       "hard": false,
-      "detail": "15/16 games have both starters",
+      "detail": "12/12 games have both starters",
       "stage": "data"
     },
     {
       "name": "kalshi-snapshot alive",
-      "ok": true,
+      "ok": false,
       "hard": false,
-      "detail": "last snapshot 90 min ago",
+      "detail": "last snapshot 182 min ago",
       "stage": "data"
     },
     {
@@ -130,34 +132,6 @@
       "hard": true,
       "detail": "feature_cols in sync",
       "stage": "data"
-    },
-    {
-      "name": "site rebuilt this run",
-      "ok": true,
-      "hard": true,
-      "detail": "0 min old, 562 KB",
-      "stage": "site"
-    },
-    {
-      "name": "site dated today",
-      "ok": true,
-      "hard": true,
-      "detail": "looked for 'generated 2026-09-23'",
-      "stage": "site"
-    },
-    {
-      "name": "site shows every upcoming game",
-      "ok": true,
-      "hard": true,
-      "detail": "13/13 matchups found in docs/index.html",
-      "stage": "site"
-    },
-    {
-      "name": "site has a freshness strip",
-      "ok": true,
-      "hard": false,
-      "detail": "health strip rendered",
-      "stage": "site"
     }
   ]
 }
