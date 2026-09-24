@@ -60,6 +60,31 @@ def test_headline_prefers_the_higher_word_then_fixed_order(tmp_path, monkeypatch
     assert labels.tier_for(_row()) == "pass"
 
 
+def test_late_season_over_is_capped_but_under_is_not(tmp_path, monkeypatch):
+    # TOTAL earns a full BET on its own record...
+    _ledger(tmp_path, monkeypatch, _rows("TOTAL", 120, 0.05))
+    assert labels.action("TOTAL") == "bet"
+    over_late = _row(total_call="OVER 9.5", total_edge=0.06)
+    over_late["days_before_season_end"] = 5
+    under_late = _row(total_call="UNDER 8.5", total_edge=0.06)
+    under_late["days_before_season_end"] = 5
+    over_early = _row(total_call="OVER 9.5", total_edge=0.06)
+    over_early["days_before_season_end"] = 30
+    # ...but an Over inside the last 14 days is capped one tier down,
+    # an Under in the same window is not, and the same Over earlier in
+    # the season is not either.
+    assert labels.tier_for(over_late) == "small"
+    assert labels.tier_for(under_late) == "bet"
+    assert labels.tier_for(over_early) == "bet"
+    assert "last 14 days" in labels.totals_why(over_late, "Over 9.5 runs")
+    assert labels.totals_why(under_late, "Under 8.5 runs") == labels.why_not_bet("TOTAL")
+
+    # A SMALL BET record caps to pass, not to "small" twice over.
+    _ledger(tmp_path, monkeypatch, _rows("TOTAL", 25, 0.05))
+    assert labels.action("TOTAL") == "small"
+    assert labels.tier_for(over_late) == "pass"
+
+
 def test_ranked_orders_by_word_then_market_return_then_edge(tmp_path, monkeypatch):
     _ledger(tmp_path, monkeypatch,
             _rows("TOTAL", 120, 0.05) + _rows("SPREAD", 30, 0.2) + _rows("ML", 30, -0.1))

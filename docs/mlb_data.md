@@ -63,7 +63,12 @@ uv run python -c "from src.mlb.compile import *; ..."   # see run_phase0 / READM
   one unit (≥100 settled bets, profitable overall and over the most recent
   half), SMALL BET half a unit (same on ≥20), PASS do nothing. A `pass` row
   can still carry a model flag in `verdict` / `spread_call` / `total_call`;
-  the record says not to act on it. Anyone rendering this feed elsewhere should show
+  the record says not to act on it. Since 2026-09-24 each row also carries
+  `days_before_season_end` (days until that season's own last scheduled
+  game); an Over total call inside the last 14 days is capped one tier
+  down regardless of the market's record (see `docs/baselines.md`'s
+  "Late-season totals" section) — Under calls in the same window are not
+  capped. Anyone rendering this feed elsewhere should show
   `label`, not derive a word from `verdict`: `verdict` is the raw
   HIGH VALUE / CAUTIOUS / NO VALUE string the backtests parse, and HIGH VALUE
   on a moneyline is a losing record, not a recommendation.

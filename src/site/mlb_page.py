@@ -231,10 +231,11 @@ def _how(r, kind, tier, what, edge):
     record that says not to act on it."""
     cost, wins = _market_price_and_wins(r, kind, what)
     ptxt = f" at <b>{_cents(cost)}</b>" if _num(cost) else ""
+    why = labels.totals_why(r, what) if kind == "TOTAL" else labels.why_not_bet(kind)
     if tier == "pass":
         s = (f'The model likes <b>{_pretty(kind, what)}</b>{ptxt} (edge {edge*100:+.1f}% after fees), '
              f'but {_KIND_VERB[kind].lower()} {labels.record_phrase(kind)}. '
-             f'<b>Sit this one out</b>: {labels.why_not_bet(kind)}.')
+             f'<b>Sit this one out</b>: {why}.')
         return f'<div class="how pass">{s}</div>'
     s = (f'Buy <b>{_pretty(kind, what)}</b>{ptxt} on Kalshi, <b>{labels.UNIT[tier]}</b>. '
          f'Edge {edge*100:+.1f}% after fees.')
@@ -242,7 +243,7 @@ def _how(r, kind, tier, what, edge):
         s += " " + _total_context(r, what)
     if tier == "small":
         s += (f' <span class="warn">Half a unit because {_KIND_VERB[kind].lower()} '
-              f'{labels.record_phrase(kind)}: {labels.why_not_bet(kind)}.</span>')
+              f'{labels.record_phrase(kind)}: {why}.</span>')
     return f'<div class="how">{s}</div>'
 
 

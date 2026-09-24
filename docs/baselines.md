@@ -221,6 +221,49 @@ that actually move totals and that the market may under-price: home-plate
 umpire, weather and wind at outdoor parks, posted lineups. Those are the
 research direction; nothing else in this file is.
 
+### Late-season totals: Over calls get overconfident (`ops/experiment_late_season.py`, run 2026-09-24)
+
+User's instinct, checked rather than taken on faith: late September has
+teams locked into (or out of) playoff seeding, and games stop being played
+at full effort — division winners rest starters, eliminated teams run out
+call-ups, bullpens get emptied for evaluation rather than the win. None of
+that is a feature this model sees. Split 2023-2025 held-out predictions
+from the exact frozen configs the site runs (moneyline and the negative-
+binomial totals model) into the last 14 days of each season's own schedule
+vs. everything earlier:
+
+| Market | Window | n | Brier | Actual rate | Model rate |
+|---|---|---|---|---|---|
+| Moneyline | early | 6754 | 0.2439 | 53.0% home | 50.7% home |
+| Moneyline | last 14 days | 535 | 0.2392 | 50.5% home | 51.2% home |
+| Total O/U 7.5 | early | 6754 | 0.2469 | 57.6% over | 59.2% over |
+| Total O/U 7.5 | last 14 days | 535 | **0.2617** | **52.2% over** | **61.5% over** |
+| Total O/U 8.5 | early | 6754 | 0.2530 | 50.5% over | 49.9% over |
+| Total O/U 8.5 | last 14 days | 535 | **0.2579** | **43.2% over** | **52.3% over** |
+| Total O/U 9.5 | early | 6754 | 0.2437 | 40.2% over | 41.1% over |
+| Total O/U 9.5 | last 14 days | 535 | 0.2395 | 35.9% over | 43.5% over |
+
+Moneyline shows no late-season effect (if anything, marginally better —
+535 games is a small, noisy sample either way). **Totals shows a real,
+directional failure**: at every line, the real over-rate drops 5–9 points
+in the last two weeks of the season while the model's own stated P(over)
+goes *up* or holds flat — the model does not adjust for lower-scoring
+late-season baseball, and at 7.5/8.5 the Brier cost is well above sampling
+noise. The miscalibration has a direction: it is specifically Over calls
+that get overconfident, not Under calls.
+
+**Fix shipped same day**: `rundown.py` logs `days_before_season_end` on
+every row (last day of that season's own schedule minus the game's date,
+so it needs no external clinch/elimination data). `labels.py` caps any
+Over total call inside that window one tier down (BET → SMALL BET → PASS)
+regardless of the market's aggregate record, and the card's "why" sentence
+says so specifically rather than quoting the generic market record. Under
+calls in the same window are untouched — nothing here shows they are
+harmed, and by the same asymmetry they may be mildly *underconfident*, an
+open question for after the season. `LATE_SEASON_DAYS = 14` is a proxy for
+"seeding is mostly decided," not a reconstructed clinch date; a sharper
+version (per-team, from actual standings) is future work.
+
 ### Totals: umpire and weather (`ops/run_totals.py`, run 2026-09-11)
 
 StatsAPI's schedule hydrates the home-plate umpire and game-time weather

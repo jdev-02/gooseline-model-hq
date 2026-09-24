@@ -281,6 +281,13 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
         print("No upcoming games in the window.")
         return None
     season = int(up["season"].max())
+    # Last scheduled day of this season's own slate, so labels.py can flag
+    # a game inside the last two weeks -- see docs/baselines.md's
+    # "late-season totals" section for why: 2023-2025 held-out data shows
+    # the totals model gets systematically MORE bullish on overs in that
+    # window while real scoring goes down, a real, measured miscalibration
+    # (found 2026-09-24, ops/experiment_late_season.py).
+    season_end = df.loc[df["season"] == season, "gameday"].max()
     lin = fit_model(df, cfg, season, cols)
     X = up[cols].values
     mu, sigma = lin.predict_dist(X)
@@ -343,6 +350,8 @@ def rundown(days=1, db_path="data/kalshi_prices.db", edge_threshold=0.04, narrat
                # First pitch as a real instant, so the page can render it on
                # the reader's own clock instead of the build machine's.
                "kick_iso": str(getattr(r, "game_datetime_utc", "") or ""),
+               "days_before_season_end": (int((season_end - r.gameday).days)
+                                          if pd.notna(season_end) else None),
                "p_home_cover": round(float(prob_margin_over(mu[j], sigma[j], RUN_LINE)), 3),
                "p_away_cover": round(float(1 - prob_margin_over(mu[j], sigma[j], -RUN_LINE)), 3),
                "note": ent.note if ent else ""}

@@ -107,6 +107,26 @@ def _num(x):
     return x is not None and not pd.isna(x)
 
 
+# The last two weeks of the regular season score fewer runs than earlier --
+# division winners rest starters, eliminated teams run out call-ups, bullpens
+# get emptied for evaluation rather than the win. Checked on 2023-2025
+# held-out data (ops/experiment_late_season.py, 2026-09-24) against the exact
+# frozen totals model the site runs: Brier at 7.5/8.5 gets meaningfully worse
+# in this window, and the failure has a direction -- the model's own stated
+# P(over) goes UP late in the season while the real over-rate goes DOWN by
+# 5-9 points. Unders were not shown to be harmed; only Over calls are capped.
+LATE_SEASON_DAYS = 14
+
+
+def _is_over(direction):
+    return str(direction).strip().lower().startswith("over")
+
+
+def late_season_caution(row):
+    d = row.get("days_before_season_end")
+    return _num(d) and int(d) < LATE_SEASON_DAYS
+
+
 def totals_flag(row):
     """(direction, line) if the row carries an actionable totals call."""
     te = row.get("total_edge")
@@ -155,9 +175,24 @@ def market_flags(row):
                     float(row.get("spread_edge") or 0)))
     tf = totals_flag(row)
     if tf:
-        out.append(("TOTAL", action("TOTAL"), f"{tf[0].title()} {tf[1]:g} runs",
+        tier = action("TOTAL")
+        if _is_over(tf[0]) and late_season_caution(row):
+            tier = {"bet": "small", "small": "pass", "pass": "pass"}[tier]
+        out.append(("TOTAL", tier, f"{tf[0].title()} {tf[1]:g} runs",
                     float(row.get("total_edge") or 0)))
     return out
+
+
+def totals_why(row, what):
+    """Why this specific totals pick isn't the market's own full word --
+    the late-season caution takes priority over the generic record reason,
+    since it is true regardless of how good the aggregate record looks."""
+    if _is_over(what) and late_season_caution(row):
+        d = int(row["days_before_season_end"])
+        return (f"the last {LATE_SEASON_DAYS} days of the season score fewer runs than "
+                f"earlier, on held-out data, and the model does not adjust for it -- Over "
+                f"calls get overconfident here specifically ({d} days left)")
+    return why_not_bet("TOTAL")
 
 
 _RANK = {"bet": 3, "small": 2, "pass": 1}
