@@ -1,6 +1,6 @@
 {
-  "run_ts": "2026-09-29T23:53:48+00:00",
-  "slate_date": "2026-09-29",
+  "run_ts": "2026-09-30T08:31:16+00:00",
+  "slate_date": "2026-09-30",
   "ok": false,
   "hard_failures": [
     "rundown ran this run"
@@ -81,7 +81,7 @@
       "name": "site dated today",
       "ok": true,
       "hard": true,
-      "detail": "looked for 'generated 2026-09-29'",
+      "detail": "looked for 'generated 2026-09-30'",
       "stage": "site"
     },
     {
