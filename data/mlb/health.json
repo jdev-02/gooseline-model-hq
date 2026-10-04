@@ -1,5 +1,5 @@
 {
-  "run_ts": "2026-10-04T18:43:06+00:00",
+  "run_ts": "2026-10-04T19:46:31+00:00",
   "slate_date": "2026-10-04",
   "ok": false,
   "hard_failures": [
@@ -74,7 +74,7 @@
       "name": "site rebuilt this run",
       "ok": true,
       "hard": true,
-      "detail": "0 min old, 527 KB",
+      "detail": "0 min old, 523 KB",
       "stage": "site"
     },
     {
