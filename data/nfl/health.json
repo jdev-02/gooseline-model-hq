@@ -1,6 +1,6 @@
 {
-  "run_ts": "2026-10-13T01:18:44+00:00",
-  "run_date": "2026-10-12",
+  "run_ts": "2026-10-13T09:23:58+00:00",
+  "run_date": "2026-10-13",
   "ok": false,
   "hard_failures": [
     "no already-started game shown as upcoming on the site"
@@ -9,62 +9,6 @@
     "kalshi-snapshot alive (NFL series)"
   ],
   "checks": [
-    {
-      "name": "games.csv refreshed",
-      "ok": true,
-      "hard": true,
-      "detail": "0 min old",
-      "stage": "data"
-    },
-    {
-      "name": "rundown ran this run",
-      "ok": true,
-      "hard": true,
-      "detail": "log last written 0 min old",
-      "stage": "data"
-    },
-    {
-      "name": "no game priced past its own kickoff",
-      "ok": true,
-      "hard": true,
-      "detail": "clean",
-      "stage": "data"
-    },
-    {
-      "name": "rows priced this run",
-      "ok": true,
-      "hard": true,
-      "detail": "15 games priced in the last 240 min",
-      "stage": "data"
-    },
-    {
-      "name": "moneyline probabilities finite",
-      "ok": true,
-      "hard": true,
-      "detail": "15/15",
-      "stage": "data"
-    },
-    {
-      "name": "Kalshi prices present",
-      "ok": true,
-      "hard": false,
-      "detail": "15/15 games have a price",
-      "stage": "data"
-    },
-    {
-      "name": "Kalshi prices fresh",
-      "ok": true,
-      "hard": false,
-      "detail": "15/15 priced games under 30h",
-      "stage": "data"
-    },
-    {
-      "name": "kalshi-snapshot alive (NFL series)",
-      "ok": false,
-      "hard": false,
-      "detail": "last snapshot 194 min ago",
-      "stage": "data"
-    },
     {
       "name": "site rebuilt this run",
       "ok": true,
@@ -92,6 +36,62 @@
       "hard": false,
       "detail": "health strip rendered",
       "stage": "site"
+    },
+    {
+      "name": "games.csv refreshed",
+      "ok": true,
+      "hard": true,
+      "detail": "0 min old",
+      "stage": "data"
+    },
+    {
+      "name": "rundown ran this run",
+      "ok": true,
+      "hard": true,
+      "detail": "log last written 0 min old",
+      "stage": "data"
+    },
+    {
+      "name": "no game priced past its own kickoff",
+      "ok": true,
+      "hard": true,
+      "detail": "clean",
+      "stage": "data"
+    },
+    {
+      "name": "rows priced this run",
+      "ok": true,
+      "hard": true,
+      "detail": "14 games priced in the last 240 min",
+      "stage": "data"
+    },
+    {
+      "name": "moneyline probabilities finite",
+      "ok": true,
+      "hard": true,
+      "detail": "14/14",
+      "stage": "data"
+    },
+    {
+      "name": "Kalshi prices present",
+      "ok": true,
+      "hard": false,
+      "detail": "14/14 games have a price",
+      "stage": "data"
+    },
+    {
+      "name": "Kalshi prices fresh",
+      "ok": true,
+      "hard": false,
+      "detail": "14/14 priced games under 30h",
+      "stage": "data"
+    },
+    {
+      "name": "kalshi-snapshot alive (NFL series)",
+      "ok": false,
+      "hard": false,
+      "detail": "last snapshot 164 min ago",
+      "stage": "data"
     }
   ]
 }
