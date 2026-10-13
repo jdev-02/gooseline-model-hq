@@ -1,40 +1,14 @@
 {
-  "run_ts": "2026-10-13T01:17:42+00:00",
+  "run_ts": "2026-10-13T01:18:44+00:00",
   "run_date": "2026-10-12",
-  "ok": true,
-  "hard_failures": [],
+  "ok": false,
+  "hard_failures": [
+    "no already-started game shown as upcoming on the site"
+  ],
   "warnings": [
     "kalshi-snapshot alive (NFL series)"
   ],
   "checks": [
-    {
-      "name": "site rebuilt this run",
-      "ok": true,
-      "hard": true,
-      "detail": "0 min old, 518 KB",
-      "stage": "site"
-    },
-    {
-      "name": "no already-started game shown as upcoming on the site",
-      "ok": true,
-      "hard": true,
-      "detail": "clean",
-      "stage": "site"
-    },
-    {
-      "name": "near-term upcoming games appear on the site",
-      "ok": true,
-      "hard": false,
-      "detail": "clean",
-      "stage": "site"
-    },
-    {
-      "name": "site has a freshness strip",
-      "ok": true,
-      "hard": false,
-      "detail": "health strip rendered",
-      "stage": "site"
-    },
     {
       "name": "games.csv refreshed",
       "ok": true,
@@ -90,6 +64,34 @@
       "hard": false,
       "detail": "last snapshot 194 min ago",
       "stage": "data"
+    },
+    {
+      "name": "site rebuilt this run",
+      "ok": true,
+      "hard": true,
+      "detail": "0 min old, 516 KB",
+      "stage": "site"
+    },
+    {
+      "name": "no already-started game shown as upcoming on the site",
+      "ok": false,
+      "hard": true,
+      "detail": "BUF@LA",
+      "stage": "site"
+    },
+    {
+      "name": "near-term upcoming games appear on the site",
+      "ok": true,
+      "hard": false,
+      "detail": "clean",
+      "stage": "site"
+    },
+    {
+      "name": "site has a freshness strip",
+      "ok": true,
+      "hard": false,
+      "detail": "health strip rendered",
+      "stage": "site"
     }
   ]
 }
