@@ -188,10 +188,12 @@ def stage_site(rep, today):
     now = pd.Timestamp.now(tz="UTC")
     live_but_shown, missing = [], []
     for r in upcoming.itertuples():
-        # Cards carry the codes in data-teams; the visible header is nicknames.
-        label_variants = (f'data-teams="{r.away_team}@{r.home_team}"',
-                          f"{r.away_team} @ {r.home_team}")
-        shown = any(v in html for v in label_variants)
+        # data-teams is the only signal scoped to an actual card. The loose
+        # "AWAY @ HOME" text form this used to also match collided with the
+        # Track Record table's historical row for the same two teams' earlier
+        # meeting this season (e.g. "W4 ARI @ LA"), producing a false "shown"
+        # for today's rematch once it had already kicked off (2026-10-18).
+        shown = f'data-teams="{r.away_team}@{r.home_team}"' in html
         ko = _kickoff_utc(r.gameday.date(), getattr(r, "gametime", None))
         started = ko is not None and now >= ko
         if started and shown:

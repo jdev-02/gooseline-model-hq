@@ -231,11 +231,14 @@ def stage_site(rep, today):
     sched, _ = _todays_schedule(today)
     if sched is not None and len(sched):
         up = sched[sched["status"].isin(UPCOMING_STATES)]
-        # Cards carry the team codes in data-teams; the visible header is now
-        # the nicknames ("Giants at Cardinals"), which this check must not
-        # depend on.
+        # data-teams is the only signal scoped to an actual card. The loose
+        # "AWAY @ HOME" text form this used to also match collides with the
+        # Track Record table's historical row for an earlier series between
+        # the same two teams this season -- MLB opponents repeat far more
+        # than NFL ones do, so this is the likelier of the two sports to hit
+        # that false match (see the matching NFL fix, 2026-10-18).
         shown = [f"{r.away} @ {r.home}" for r in up.itertuples()
-                 if f'data-teams="{r.away}@{r.home}"' in html or f"{r.away} @ {r.home}" in html]
+                 if f'data-teams="{r.away}@{r.home}"' in html]
         rep.add("site shows every upcoming game", len(shown) == len(up),
                 f"{len(shown)}/{len(up)} matchups found in docs/index.html")
     rep.add("site has a freshness strip", 'class="health ' in html, "health strip rendered", hard=False)

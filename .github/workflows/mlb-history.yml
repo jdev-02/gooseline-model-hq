@@ -3,8 +3,12 @@ name: mlb-history
 # Rebuilds the Track Record tab's per-game walk-forward history. Expensive
 # (three seasons of weekly refits), so weekly rather than daily.
 on:
-  schedule:
-    - cron: "13 12 * * 1"       # Mondays 08:13 ET; off the hour, see mlb-daily.yml
+  # Disabled 2026-10-18 along with mlb-daily: the regular season is over
+  # (2023-2025 history doesn't change), so there's nothing new to refresh
+  # until next season. workflow_dispatch still works for a manual run.
+  # Re-enable by restoring:
+  #   schedule:
+  #     - cron: "13 12 * * 1"       # Mondays 08:13 ET; off the hour, see mlb-daily.yml
   workflow_dispatch:
 
 permissions:

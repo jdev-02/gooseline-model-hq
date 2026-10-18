@@ -7,16 +7,18 @@ name: mlb-daily
 # every run is idempotent (the log and paper trade keep the last row per
 # game), and the later slots see posted probables and fresher prices.
 on:
-  schedule:
-    # Off the hour/half-hour on purpose: GitHub's own docs say scheduled
-    # workflows are most likely to be delayed or dropped "during periods of
-    # high loads," and high load times include the top of every hour --
-    # because nearly everyone schedules on :00/:30. 2026-09-23: this repo's
-    # two on-the-hour slots (11:00 and 16:00 ET) both silently didn't fire
-    # the same morning. Odd minutes are cheap insurance, not a full fix.
-    - cron: "7 15 * * *"         # 11:07 ET (EDT)
-    - cron: "37 16 * * *"        # 12:37 ET
-    - cron: "7 20 * * *"         # 16:07 ET, before the early first pitches
+  # Regular season ended 2026-09-27 (games.csv has no games past that date).
+  # Schedule trigger disabled 2026-10-18: there is nothing to run against,
+  # so every scheduled fire was hitting the health gate's "rundown ran this
+  # run" / "schedule has today" checks and failing, and the watchdog was
+  # re-dispatching the failure every time it saw no success for the day --
+  # a failure-email loop with nothing behind it. workflow_dispatch is kept
+  # so this can still be run by hand (e.g. a one-off playoff test).
+  # Re-enable by restoring the schedule block below when next season starts:
+  #   schedule:
+  #     - cron: "7 15 * * *"         # 11:07 ET (EDT)
+  #     - cron: "37 16 * * *"        # 12:37 ET
+  #     - cron: "7 20 * * *"         # 16:07 ET, before the early first pitches
   workflow_dispatch:
 
 permissions:

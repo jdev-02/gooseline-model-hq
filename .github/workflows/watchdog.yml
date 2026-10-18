@@ -64,7 +64,13 @@ jobs:
               --json status,conclusion --jq '.[0] | "\(.status)/\(.conclusion // "-")"' || echo "none"
           }
 
-          for wf in mlb-daily.yml nfl-daily.yml; do
+          # mlb-daily.yml dropped from this loop 2026-10-18: its own schedule
+          # trigger is off for the off-season (see mlb-daily.yml), so "no
+          # successful run today" is expected every day, not a drop -- this
+          # loop was re-dispatching it into a guaranteed failure and emailing
+          # every single watchdog slot. Restore it here when that cron comes
+          # back for next season.
+          for wf in nfl-daily.yml; do
             n=$(done_today "$wf")
             st=$(latest_state "$wf")
             if [ "$n" = "0" ]; then
@@ -108,7 +114,11 @@ jobs:
               problems+=("$1 missing")
             fi
           }
-          check_health data/mlb/health.json slate_date MLB
+          # MLB health_check dropped 2026-10-18, same reason as above: with
+          # mlb-daily not running, data/mlb/health.json's slate_date never
+          # advances, so this would permanently flag "health.json is for
+          # <stale date>, not today" and keep the watchdog issue open
+          # forever. Restore when mlb-daily's cron comes back.
           check_health data/nfl/health.json run_date NFL
 
           {
