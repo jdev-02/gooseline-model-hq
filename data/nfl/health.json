@@ -1,12 +1,42 @@
 {
-  "run_ts": "2026-10-18T18:37:05+00:00",
+  "run_ts": "2026-10-18T21:27:02+00:00",
   "run_date": "2026-10-18",
   "ok": false,
   "hard_failures": [
     "no already-started game shown as upcoming on the site"
   ],
-  "warnings": [],
+  "warnings": [
+    "kalshi-snapshot alive (NFL series)"
+  ],
   "checks": [
+    {
+      "name": "site rebuilt this run",
+      "ok": true,
+      "hard": true,
+      "detail": "0 min old, 520 KB",
+      "stage": "site"
+    },
+    {
+      "name": "no already-started game shown as upcoming on the site",
+      "ok": false,
+      "hard": true,
+      "detail": "CHI@ATL; BAL@CLE; TEN@IND; NYJ@NE; NO@NYG; CAR@PHI",
+      "stage": "site"
+    },
+    {
+      "name": "near-term upcoming games appear on the site",
+      "ok": true,
+      "hard": false,
+      "detail": "clean",
+      "stage": "site"
+    },
+    {
+      "name": "site has a freshness strip",
+      "ok": true,
+      "hard": false,
+      "detail": "health strip rendered",
+      "stage": "site"
+    },
     {
       "name": "games.csv refreshed",
       "ok": true,
@@ -58,38 +88,10 @@
     },
     {
       "name": "kalshi-snapshot alive (NFL series)",
-      "ok": true,
-      "hard": false,
-      "detail": "last snapshot 81 min ago",
-      "stage": "data"
-    },
-    {
-      "name": "site rebuilt this run",
-      "ok": true,
-      "hard": true,
-      "detail": "0 min old, 520 KB",
-      "stage": "site"
-    },
-    {
-      "name": "no already-started game shown as upcoming on the site",
       "ok": false,
-      "hard": true,
-      "detail": "CHI@ATL; BAL@CLE; TEN@IND; NYJ@NE; NO@NYG; CAR@PHI",
-      "stage": "site"
-    },
-    {
-      "name": "near-term upcoming games appear on the site",
-      "ok": true,
       "hard": false,
-      "detail": "clean",
-      "stage": "site"
-    },
-    {
-      "name": "site has a freshness strip",
-      "ok": true,
-      "hard": false,
-      "detail": "health strip rendered",
-      "stage": "site"
+      "detail": "last snapshot 112 min ago",
+      "stage": "data"
     }
   ]
 }
