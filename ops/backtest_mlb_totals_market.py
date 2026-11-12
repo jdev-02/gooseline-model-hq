@@ -11,14 +11,12 @@ counted so the caveat is visible.
 
   uv run python ops/backtest_mlb_totals_market.py
 """
-import sqlite3
 import sys
 from pathlib import Path
 import numpy as np, pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.core.kalshi import kalshi_fee  # noqa: E402
 
-DB = "data/kalshi_prices.db"
 log = pd.read_csv("data/mlb/narrative/log.csv", low_memory=False)
 log = log.sort_values("run_ts").drop_duplicates(["game_pk", "date"], keep="last")
 g = pd.read_csv("data/mlb/games.csv", low_memory=False)[["game_pk", "home_score", "away_score", "played"]]
@@ -28,9 +26,12 @@ h = h.rename(columns={c: c.replace(".", "_") for c in h.columns
                       if "p_over_" in c or "mkt_over_" in c or "mkt_under_" in c})
 
 _snap = pd.DataFrame(columns=["ticker", "yes_bid", "ts"])
-if Path(DB).exists():
-    con = sqlite3.connect(DB)
-    _snap = pd.read_sql("SELECT ticker, yes_bid, ts_utc FROM snapshots WHERE series_ticker='KXMLBTOTAL'", con)
+# Finished weeks live in data/kalshi_archive/ since 2026-11-12 (the single
+# file outgrew GitHub's 100 MB limit); history() reads archives + live file.
+from src.core.kalshi_archive import history  # noqa: E402
+_h = history("KXMLBTOTAL", "ticker, yes_bid, ts_utc")
+if len(_h):
+    _snap = _h
     _snap["ts"] = pd.to_datetime(_snap["ts_utc"], utc=True)
 
 

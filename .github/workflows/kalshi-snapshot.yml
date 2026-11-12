@@ -3,6 +3,12 @@ name: kalshi-snapshot
 # Logs NFL + MLB Kalshi prices every ~30 min, 10:00-24:00 ET, and commits the
 # sqlite log back to main so a laptop that is often offline still has a
 # continuous price history to pull.
+#
+# 2026-10-19 to 2026-11-12: data/kalshi_prices.db passed GitHub's 100 MB
+# per-file limit and every push was rejected (GH001), so 24 days of snapshots
+# never landed. The live file now holds the current ISO week only; finished
+# weeks rotate into data/kalshi_archive/<week>.db.gz (src/core/kalshi_archive.py).
+# Full history in one file: uv run python -m src.core.kalshi_archive combine OUT
 on:
   schedule:
     # :07/:37 rather than :00/:30 -- see mlb-daily.yml on why.
@@ -28,11 +34,14 @@ jobs:
           python-version: "3.11"
       - run: uv sync --no-dev
       - run: uv run python ops/kalshi_snapshot.py --db data/kalshi_prices.db
+      - name: rotate finished weeks into the archive
+        run: uv run python -m src.core.kalshi_archive rotate --db data/kalshi_prices.db
       - name: commit
         run: |
           git config user.name "model-hq-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/kalshi_prices.db
+          [ -d data/kalshi_archive ] && git add data/kalshi_archive
           git diff --cached --quiet && exit 0
           git commit -m "data(kalshi): snapshot $(date -u +%Y-%m-%dT%H:%MZ)"
           git pull --rebase origin main
